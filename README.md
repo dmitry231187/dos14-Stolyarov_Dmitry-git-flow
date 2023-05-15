@@ -20,7 +20,7 @@ There are my homeworks
 5. Закоммитить все файлы (pyptoject.toml, poetry.lock, main.py etc) в feature ветку, слить ее с develop(без апрува)
 6. По готовности сделать пулл реквест в master с апрувером @ggramal, отписатcd.ься в тг канале
 
-##HW16
+## HW16
 1. База данных отдаёт 4 массива cтрок с информацией о пользователях. Все строки имеют вид - "<id>_<атрибут пользователя>". Нужно обработать эти данные и создать массив из словарей:
 [
 {id: "<some_id>", first_name: "<some_first_name>", last_name: "<some_last_name>", date_of_birth:<some_age>}
