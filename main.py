@@ -60,7 +60,6 @@ for i in range(len(array_first_name)):
             "date_of_birth": None,
         }
     )
-    i += 1
 
 # обрабатываем массивы и записываем данные в нужные места
 for element in array_first_name:
