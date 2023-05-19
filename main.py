@@ -1,80 +1,102 @@
-# исходные данные
-array_first_name = [
-    "2_Комарова",
-    "5_Леонова",
-    "10_Фадеева",
-    "6_Соколова",
-    "4_Назаров",
-    "7_Дроздова",
-    "8_Гордеева",
-    "3_Смирнов",
-    "9_Николаев",
-    "1_Калашников",
-]
-array_last_name = [
-    "2_Варвара",
-    "6_Алина",
-    "9_Владислав",
-    "4_Владислав",
-    "5_Анастасия",
-    "3_Антон",
-    "1_Марк",
-    "8_Амелия",
-    "7_Василиса",
-    "10_София",
-]
-array_patronymic = [
-    "2_Олеговна",
-    "1_Анатольевич",
-    "3_Эдуардович",
-    "5_Валерьевна",
-    "7_Игоревна",
-    "6_Васильевна",
-    "9_Иосифович",
-    "8_Александровна",
-    "10_Игоревна",
-    "4_Владимирович",
-]
-array_date_of_birth = [
-    "1_1985",
-    "3_1978",
-    "4_2001",
-    "10_1982",
-    "5_1970",
-    "6_1990",
-    "8_1963",
-    "7_2004",
-    "2_1996",
-    "9_1966",
-]
+import yaml
+import csv
+from datetime import date
+import json
 
-# определяем количество людей и создаем массив нужной длины
-array_users = []
-for i in range(len(array_first_name)):
+
+# ф-ция проверки на наличие нужного id, если не находим - добавляем словари до нужного id
+def find_id(id_user):
+    no_id = True
+    for user in array_users:
+        if user["id"] == id_user:
+            no_id = False
+    if no_id:
+        for i in range(id_user - len(array_users)):
+            next_id = len(array_users) + 1
+            array_users.append(
+                {
+                    "id": next_id,
+                    "first_name": None,
+                    "last_name": None,
+                    "fathers_name": None,
+                    "date_of_birth": None,
+                }
+            )
+
+
+# ф-ция записи данных пользователя в наш список пользователей
+def write_user_data(user):
+    for element in user.keys():
+        if element == "date_of_birth":
+            array_users[int(user["id"]) - 1][element] = int(user[element])
+        elif element != "id":
+            array_users[int(user["id"]) - 1][element] = user[element]
+
+
+# ф-ция расчета возраста пользователя
+def age_user(user):
+    return date.today().year - user["date_of_birth"]
+
+
+# ф-ция добавления пользователя
+def add_user(first_name, last_name, fathers_name, date_of_birth):
+    id_new_user = array_users[-1]["id"] + 1
     array_users.append(
         {
-            "id": None,
-            "first_name": None,
-            "last_name": None,
-            "patronymic": None,
-            "date_of_birth": None,
+            "id": id_new_user,
+            "first_name": first_name,
+            "last_name": last_name,
+            "fathers_name": fathers_name,
+            "date_of_birth": date_of_birth,
         }
     )
+    array_users[-1]["age"] = age_user(array_users[-1])
 
-# обрабатываем массивы и записываем данные в нужные места
-for element in array_first_name:
-    array_temp = element.split("_")
-    array_users[int(array_temp[0]) - 1]["first_name"] = array_temp[1]
-    array_users[int(array_temp[0]) - 1]["id"] = int(array_temp[0])
-for element in array_last_name:
-    array_temp = element.split("_")
-    array_users[int(array_temp[0]) - 1]["last_name"] = array_temp[1]
-for element in array_patronymic:
-    array_temp = element.split("_")
-    array_users[int(array_temp[0]) - 1]["patronymic"] = array_temp[1]
-for element in array_date_of_birth:
-    array_temp = element.split("_")
-    array_users[int(array_temp[0]) - 1]["date_of_birth"] = array_temp[1]
-# печатаем итоговый массив в столбик
+
+# ф-ция записи в json
+def write_json():
+    with open("users.json", "w") as f:
+        json.dump(array_users, f, ensure_ascii=False)
+
+
+# создаем пустой массив для списка пользователей с их данными
+array_users = [
+    {
+        "id": 1,
+        "first_name": None,
+        "last_name": None,
+        "fathers_name": None,
+        "date_of_birth": None,
+    }
+]
+
+# получаем данные из yaml файла
+with open("users.yaml", "r") as f:
+    users_yaml = yaml.safe_load(f)
+
+# обрабатываем массив и записываем данные в список пользователей
+for user in users_yaml["users"]:
+    find_id(int(user["id"]))
+    write_user_data(user)
+
+# получаем данные из csv файла
+with open("users.csv", "r") as f:
+    users_csv = csv.DictReader(f)
+    # обрабатываем массив и записываем данные в список пользователей
+    for user in users_csv:
+        find_id(int(user["id"]))
+        write_user_data(user)
+
+# добавляем каждому пользователю его возраст
 for element in array_users:
-    print(element)
+    element["age"] = age_user(element)
+
+# сохраним данные в файл json
+write_json()
+
+# добавляем нового пользователя и записываем в json
+add_user("test_name", "test_last_name", "test_fathers_name", 2000)
+write_json()
+
+# for row in array_users:
+#    print(row)
