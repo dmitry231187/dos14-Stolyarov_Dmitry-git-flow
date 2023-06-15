@@ -14,32 +14,32 @@ class Permissions:
     def create(self):
         return self._create
 
-    @property
-    def set_create(self, create=False):
+    @create.setter
+    def create(self, create):
         self._create = create
 
     @property
     def read(self):
         return self._read
 
-    @property
-    def set_read(self, read=False):
+    @read.setter
+    def read(self, read):
         self._read = read
 
     @property
     def update(self):
         return self._update
 
-    @property
-    def set_update(self, update=False):
+    @update.setter
+    def update(self, update):
         self._update = update
 
     @property
     def delete(self):
         return self._delete
 
-    @property
-    def set_delete(self, delete=False):
+    @delete.setter
+    def delete(self, delete):
         self._delete = delete
 
 
@@ -54,12 +54,12 @@ class Role:
     def name(self):
         return self._name
 
-    def __getitem__(self,key):
+    def __getitem__(self, key):
         return self._role[key]
 
 
 class Entity:
-    def __init__(self, entity_id:int, role):
+    def __init__(self, entity_id: int, role):
         self._entity_id = entity_id
         self._role = role
 
@@ -71,13 +71,21 @@ class Entity:
     def role(self):
         return self._role
 
-    @property
-    def set_role(self, role):
+    @role.setter
+    def role(self, role):
         self._role = role
 
 
 class User(Entity):
-    def __init__(self, entity_id:int, role, first_name, last_name, fathers_name, date_of_birth):
+    def __init__(
+        self,
+        entity_id: int,
+        role,
+        first_name,
+        last_name,
+        fathers_name,
+        date_of_birth: int,
+    ):
         super().__init__(entity_id, role)
         self._first_name = first_name
         self._last_name = last_name
@@ -86,8 +94,8 @@ class User(Entity):
 
     @property
     def first_name(self):
-            return self._first_name
-      
+        return self._first_name
+
     @property
     def last_name(self):
         return self._last_name
@@ -106,7 +114,7 @@ class User(Entity):
 
 
 class Organisation(Entity):
-    def __init__(self, entity_id:int, role, creation_date, unp, name):
+    def __init__(self, entity_id: int, role, creation_date, unp, name):
         super().__init__(entity_id, role)
         self._creation_date = creation_date
         self._unp = unp
@@ -124,8 +132,9 @@ class Organisation(Entity):
     def name(self):
         return self._name
 
+
 class App(Entity):
-    def __init__(self, entity_id:int, role, name):
+    def __init__(self, entity_id: int, role, name):
         super().__init__(entity_id, role)
         self._name = name
 
@@ -133,42 +142,67 @@ class App(Entity):
     def name(self):
         return self._name
 
+
 # функция добавления пользователя
 def create_user(role, first_name, last_name, fathers_name, date_of_birth):
     entity_id = array_users[-1].entity_id + 1
-    new_user = User(entity_id, role, first_name, last_name, fathers_name, date_of_birth)
+    new_user = User(
+        entity_id, array_roles[role], first_name, last_name, fathers_name, date_of_birth
+    )
     array_users.append(new_user)
 
 
 def main():
-    # создаем пустые массивы 
+    # создаем пустые массивы
     global array_users
+    global array_roles
     array_users = []
     array_apps = []
-    array_roles = [] 
-    
-    # получаем список пользователей и организаций
-    with open("users.json", "r") as f:
-        users_json = json.load(f)
-        
-    for usr in users_json["Users"]:
-        array_users.append(User(usr['entity_id'], usr['role'], usr['first_name'], usr['last_name'], usr['fathers_name'], usr['date_of_birth']))
-    
-    for org in users_json["Organisations"]:
-        array_users.append(Organisation(org['entity_id'], org['role'], org['creation_date'], org['unp'], org['name']))
+    array_roles = {}
 
-    # получаем список app
-    with open("app.yaml", "r") as f:
-        app_yaml = yaml.safe_load(f)
-    
-    for app in app_yaml["Apps"]:
-        array_apps.append(App(app['entity_id'], app['role'], app['name']))
-    
     # получаем список roles
     with open("roles.yaml", "r") as f:
         roles_yaml = yaml.safe_load(f)
     for key in roles_yaml.keys():
-        array_roles.append(Role(key, roles_yaml[key]))
+        array_roles[key] = Role(key, roles_yaml[key])
+
+    # получаем список app
+    with open("app.yaml", "r") as f:
+        app_yaml = yaml.safe_load(f)
+
+    for app in app_yaml["Apps"]:
+        array_apps.append(App(app["entity_id"], app["role"], app["name"]))
+
+    # получаем список пользователей и организаций
+    with open("users.json", "r") as f:
+        users_json = json.load(f)
+
+    for usr in users_json["Users"]:
+        # print(array_roles[usr["role"]])
+        array_users.append(
+            User(
+                usr["entity_id"],
+                array_roles[usr["role"]],
+                usr["first_name"],
+                usr["last_name"],
+                usr["fathers_name"],
+                usr["date_of_birth"],
+            )
+        )
+
+    for org in users_json["Organisations"]:
+        array_users.append(
+            Organisation(
+                org["entity_id"],
+                array_roles[org["role"]],
+                org["creation_date"],
+                org["unp"],
+                org["name"],
+            )
+        )
+
+    # создаём тестового пользователя
+    create_user("default", "Иванов", "Иван", "Иванович", 1999)
+
 
 main()
-
