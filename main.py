@@ -178,7 +178,6 @@ def main():
         users_json = json.load(f)
 
     for usr in users_json["Users"]:
-        # print(array_roles[usr["role"]])
         array_users.append(
             User(
                 usr["entity_id"],
