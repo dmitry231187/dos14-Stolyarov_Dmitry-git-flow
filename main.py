@@ -1,102 +1,207 @@
 import yaml
-import csv
 from datetime import date
 import json
 
 
-# ф-ция проверки на наличие нужного id, если не находим - добавляем словари до нужного id
-def find_id(id_user):
-    no_id = True
-    for user in array_users:
-        if user["id"] == id_user:
-            no_id = False
-    if no_id:
-        for i in range(id_user - len(array_users)):
-            next_id = len(array_users) + 1
-            array_users.append(
-                {
-                    "id": next_id,
-                    "first_name": None,
-                    "last_name": None,
-                    "fathers_name": None,
-                    "date_of_birth": None,
-                }
-            )
+class Permissions:
+    def __init__(self, create=False, read=False, update=False, delete=False):
+        self._create = create
+        self._read = read
+        self._update = update
+        self._delete = delete
+
+    @property
+    def create(self):
+        return self._create
+
+    @create.setter
+    def create(self, create):
+        self._create = create
+
+    @property
+    def read(self):
+        return self._read
+
+    @read.setter
+    def read(self, read):
+        self._read = read
+
+    @property
+    def update(self):
+        return self._update
+
+    @update.setter
+    def update(self, update):
+        self._update = update
+
+    @property
+    def delete(self):
+        return self._delete
+
+    @delete.setter
+    def delete(self, delete):
+        self._delete = delete
 
 
-# ф-ция записи данных пользователя в наш список пользователей
-def write_user_data(user):
-    for element in user.keys():
-        if element == "date_of_birth":
-            array_users[int(user["id"]) - 1][element] = int(user[element])
-        elif element != "id":
-            array_users[int(user["id"]) - 1][element] = user[element]
+class Role:
+    def __init__(self, name, dict_with_permission):
+        self._name = name
+        self._role = {}
+        for key, value in dict_with_permission.items():
+            self._role[key] = Permissions(**value)
+
+    @property
+    def name(self):
+        return self._name
+
+    def __getitem__(self, key):
+        return self._role[key]
 
 
-# ф-ция расчета возраста пользователя
-def age_user(user):
-    return date.today().year - user["date_of_birth"]
+class Entity:
+    def __init__(self, entity_id: int, role):
+        self._entity_id = entity_id
+        self._role = role
+
+    @property
+    def entity_id(self):
+        return self._entity_id
+
+    @property
+    def role(self):
+        return self._role
+
+    @role.setter
+    def role(self, role):
+        self._role = role
 
 
-# ф-ция добавления пользователя
-def add_user(first_name, last_name, fathers_name, date_of_birth):
-    id_new_user = array_users[-1]["id"] + 1
-    array_users.append(
-        {
-            "id": id_new_user,
-            "first_name": first_name,
-            "last_name": last_name,
-            "fathers_name": fathers_name,
-            "date_of_birth": date_of_birth,
-        }
+class User(Entity):
+    def __init__(
+        self,
+        entity_id: int,
+        role,
+        first_name,
+        last_name,
+        fathers_name,
+        date_of_birth: int,
+    ):
+        super().__init__(entity_id, role)
+        self._first_name = first_name
+        self._last_name = last_name
+        self._fathers_name = fathers_name
+        self._date_of_birth = date_of_birth
+
+    @property
+    def first_name(self):
+        return self._first_name
+
+    @property
+    def last_name(self):
+        return self._last_name
+
+    @property
+    def fathers_name(self):
+        return self._fathers_name
+
+    @property
+    def date_of_birth(self):
+        return self._date_of_birth
+
+    @property
+    def age(self):
+        return date.today().year - self._date_of_birth
+
+
+class Organisation(Entity):
+    def __init__(self, entity_id: int, role, creation_date, unp, name):
+        super().__init__(entity_id, role)
+        self._creation_date = creation_date
+        self._unp = unp
+        self._name = name
+
+    @property
+    def creation_date(self):
+        return self._creation_date
+
+    @property
+    def unp(self):
+        return self._unp
+
+    @property
+    def name(self):
+        return self._name
+
+
+class App(Entity):
+    def __init__(self, entity_id: int, role, name):
+        super().__init__(entity_id, role)
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
+
+
+# функция добавления пользователя
+def create_user(role, first_name, last_name, fathers_name, date_of_birth):
+    entity_id = array_users[-1].entity_id + 1
+    new_user = User(
+        entity_id, array_roles[role], first_name, last_name, fathers_name, date_of_birth
     )
-    array_users[-1]["age"] = age_user(array_users[-1])
+    array_users.append(new_user)
 
 
-# ф-ция записи в json
-def write_json():
-    with open("users.json", "w") as f:
-        json.dump(array_users, f, ensure_ascii=False)
+def main():
+    # создаем пустые массивы
+    global array_users
+    global array_roles
+    array_users = []
+    array_apps = []
+    array_roles = {}
+
+    # получаем список roles
+    with open("roles.yaml", "r") as f:
+        roles_yaml = yaml.safe_load(f)
+    for key in roles_yaml.keys():
+        array_roles[key] = Role(key, roles_yaml[key])
+
+    # получаем список app
+    with open("app.yaml", "r") as f:
+        app_yaml = yaml.safe_load(f)
+
+    for app in app_yaml["Apps"]:
+        array_apps.append(App(app["entity_id"], app["role"], app["name"]))
+
+    # получаем список пользователей и организаций
+    with open("users.json", "r") as f:
+        users_json = json.load(f)
+
+    for usr in users_json["Users"]:
+        array_users.append(
+            User(
+                usr["entity_id"],
+                array_roles[usr["role"]],
+                usr["first_name"],
+                usr["last_name"],
+                usr["fathers_name"],
+                usr["date_of_birth"],
+            )
+        )
+
+    for org in users_json["Organisations"]:
+        array_users.append(
+            Organisation(
+                org["entity_id"],
+                array_roles[org["role"]],
+                org["creation_date"],
+                org["unp"],
+                org["name"],
+            )
+        )
+
+    # создаём тестового пользователя
+    create_user("default", "Иванов", "Иван", "Иванович", 1999)
 
 
-# создаем пустой массив для списка пользователей с их данными
-array_users = [
-    {
-        "id": 1,
-        "first_name": None,
-        "last_name": None,
-        "fathers_name": None,
-        "date_of_birth": None,
-    }
-]
-
-# получаем данные из yaml файла
-with open("users.yaml", "r") as f:
-    users_yaml = yaml.safe_load(f)
-
-# обрабатываем массив и записываем данные в список пользователей
-for user in users_yaml["users"]:
-    find_id(int(user["id"]))
-    write_user_data(user)
-
-# получаем данные из csv файла
-with open("users.csv", "r") as f:
-    users_csv = csv.DictReader(f)
-    # обрабатываем массив и записываем данные в список пользователей
-    for user in users_csv:
-        find_id(int(user["id"]))
-        write_user_data(user)
-
-# добавляем каждому пользователю его возраст
-for element in array_users:
-    element["age"] = age_user(element)
-
-# сохраним данные в файл json
-write_json()
-
-# добавляем нового пользователя и записываем в json
-add_user("test_name", "test_last_name", "test_fathers_name", 2000)
-write_json()
-
-# for row in array_users:
-#    print(row)
+main()
