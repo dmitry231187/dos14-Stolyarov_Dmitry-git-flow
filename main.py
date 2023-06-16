@@ -1,7 +1,9 @@
 import yaml
 from datetime import date
 import json
+from flask import Flask, abort, make_response
 
+app = Flask(__name__)
 
 class Permissions:
     def __init__(self, create=False, read=False, update=False, delete=False):
@@ -42,6 +44,14 @@ class Permissions:
     def delete(self, delete):
         self._delete = delete
 
+    @property
+    def to_dict(self):
+        return {
+                "create" : self._create,
+                "read" : self._read,
+                "update" : self._update,
+                "delete" : self._delete,
+                }
 
 class Role:
     def __init__(self, name, dict_with_permission):
@@ -56,16 +66,26 @@ class Role:
 
     def __getitem__(self, key):
         return self._role[key]
+    
+    @property
+    def to_dict(self):
+        permissions = {}
+        for key, value in self._role.items():
+            permissions[key] = value.to_dict
+        return {
+                "name" : self._name,
+                "permissions" : permissions,
+                }
 
 
-class Entity:
-    def __init__(self, entity_id: int, role):
-        self._entity_id = entity_id
+class Client:
+    def __init__(self, client_id: int, role):
+        self._client_id = client_id
         self._role = role
 
     @property
-    def entity_id(self):
-        return self._entity_id
+    def client_id(self):
+        return self._client_id
 
     @property
     def role(self):
@@ -76,17 +96,9 @@ class Entity:
         self._role = role
 
 
-class User(Entity):
-    def __init__(
-        self,
-        entity_id: int,
-        role,
-        first_name,
-        last_name,
-        fathers_name,
-        date_of_birth: int,
-    ):
-        super().__init__(entity_id, role)
+class User(Client):
+    def __init__(self, client_id: int, role, first_name, last_name, fathers_name, date_of_birth: int):
+        super().__init__(client_id, role)
         self._first_name = first_name
         self._last_name = last_name
         self._fathers_name = fathers_name
@@ -112,10 +124,21 @@ class User(Entity):
     def age(self):
         return date.today().year - self._date_of_birth
 
+    @property
+    def to_dict(self):
+        return {
+                "client_id" : self._client_id,
+                "first_name" : self._first_name,
+                "last_name" : self._last_name,
+                "fathers_name" : self._fathers_name,
+                "date_of_birth" : self._date_of_birth,
+                "role" : self._role.to_dict,
+                }
 
-class Organisation(Entity):
-    def __init__(self, entity_id: int, role, creation_date, unp, name):
-        super().__init__(entity_id, role)
+
+class Organisation(Client):
+    def __init__(self, client_id: int, role, creation_date, unp, name):
+        super().__init__(client_id, role)
         self._creation_date = creation_date
         self._unp = unp
         self._name = name
@@ -131,11 +154,21 @@ class Organisation(Entity):
     @property
     def name(self):
         return self._name
+    
+    @property
+    def to_dict(self):
+        return {
+                "client_id" : self._client_id,
+                "creation_date" : self._creation_date,
+                "unp" : self._unp,
+                "name" : self._name,
+                "role" : self._role.to_dict,
+                }
 
 
-class App(Entity):
-    def __init__(self, entity_id: int, role, name):
-        super().__init__(entity_id, role)
+class App(Client):
+    def __init__(self, client_id: int, role, name):
+        super().__init__(client_id, role)
         self._name = name
 
     @property
@@ -145,14 +178,17 @@ class App(Entity):
 
 # функция добавления пользователя
 def create_user(role, first_name, last_name, fathers_name, date_of_birth):
-    entity_id = array_users[-1].entity_id + 1
+    client_id = array_users[-1].client_id + 1
     new_user = User(
-        entity_id, array_roles[role], first_name, last_name, fathers_name, date_of_birth
+        client_id, array_roles[role], first_name, last_name, fathers_name, date_of_birth
     )
     array_users.append(new_user)
 
+# ищем пользователя по id
+def find_id(client_id):
+    pass
 
-def main():
+def some_main():
     # создаем пустые массивы
     global array_users
     global array_roles
@@ -171,7 +207,7 @@ def main():
         app_yaml = yaml.safe_load(f)
 
     for app in app_yaml["Apps"]:
-        array_apps.append(App(app["entity_id"], app["role"], app["name"]))
+        array_apps.append(App(app["client_id"], app["role"], app["name"]))
 
     # получаем список пользователей и организаций
     with open("users.json", "r") as f:
@@ -180,7 +216,7 @@ def main():
     for usr in users_json["Users"]:
         array_users.append(
             User(
-                usr["entity_id"],
+                usr["client_id"],
                 array_roles[usr["role"]],
                 usr["first_name"],
                 usr["last_name"],
@@ -192,7 +228,7 @@ def main():
     for org in users_json["Organisations"]:
         array_users.append(
             Organisation(
-                org["entity_id"],
+                org["client_id"],
                 array_roles[org["role"]],
                 org["creation_date"],
                 org["unp"],
@@ -202,6 +238,24 @@ def main():
 
     # создаём тестового пользователя
     create_user("default", "Иванов", "Иван", "Иванович", 1999)
+    
+    # test
+#    print(array_users[0].role['users'].read)
+#    print(array_users[0].to_dict)
 
 
-main()
+@app.route("/api/v1/users/<int:client_id>", methods=["GET"])
+def client_data(client_id):
+    if array_users[0].role['users'].read:
+        return array_users[client_id - 1].to_dict
+    else:
+        pass
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    some_main()
