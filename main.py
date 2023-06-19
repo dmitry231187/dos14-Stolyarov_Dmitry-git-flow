@@ -267,20 +267,26 @@ def find_id(header, required_id, role_name):
         token = json.loads(header)
         #check client_id and permissions client_id
         if token.get('client_id') or token.get('client_id') == 0:
-            client_id = token.get('client_id')
-            if client_id - 1 in range(len(array_users)): #на всякий случай проверим запрашиваюшего информацию
-                if array_users[client_id - 1].role[role_name] and array_users[client_id - 1].role[role_name].read:
-                    #check required_id and return data
-                    if required_id == "all":
-                        return all_clients(user_type)
-                    elif required_id - 1 in range(len(array_users)) and isinstance(array_users[required_id -1], class_user):
-                        return [json.dumps(array_users[required_id - 1].to_dict, ensure_ascii=False), 'client_id']
+            client_id = token.get('client_id') - 1
+            if client_id in range(len(array_users)): #на всякий случай проверим запрашиваюшего информацию
+                if isinstance(array_users[client_id].role[role_name], Permissions):
+                    if array_users[client_id].role[role_name].read:
+                        #check required_id and return data
+                        if required_id == "all":
+                            return all_clients(user_type)
+                        elif required_id == "put":
+                            pass # заготовка для метода put
+                            #return 
+                        elif required_id - 1 in range(len(array_users)) and isinstance(array_users[required_id -1], class_user):
+                            return [json.dumps(array_users[required_id - 1].to_dict, ensure_ascii=False), 'client_id']
+                        else:
+                            return [{"status": "error", "message": f"No {user_type} with id = {required_id}"}, 400]
                     else:
-                        return [{"status": "error", "message": f"No {user_type} with id = {required_id}"}, 404]
+                        return [{"status": "error", "message": f"Access is denied for user with id = {client_id + 1}"}, 403]
                 else:
-                    return [{"status": "error", "message": f"Access is denied for user with id = {client_id}"}, 403]
+                    return [{"status": "error", "message": f"Access is denied for user with id = {client_id + 1}"}, 403]
             else:
-                return [{"status": "error", "message": f"No user with id = {client_id}"}, 404]
+                return [{"status": "error", "message": f"No user with id = {client_id + 1}"}, 400]
         else:
             return [{"status": "error", "message": "Client_id in token header not found"}, 400]
     else:
@@ -289,6 +295,10 @@ def find_id(header, required_id, role_name):
 #получаем данные о пользователе
 @app.route("/api/v1/<client>/<int:client_id>", methods=["GET"])
 def client_data(client, client_id):
+    if client not in ("users", "organisations"):
+        response = make_response({"status": "error", "message": f"{client} not found"})
+        response.status = 400
+        return response
     result = find_id(request.headers.get('token'), client_id, client)
     # check flag'client_id', if true - give result, else - error
     if result[1] == 'client_id':
@@ -301,6 +311,10 @@ def client_data(client, client_id):
 #получаем данные о всех пользователях
 @app.route("/api/v1/<client>", methods=["GET"])
 def all_clients_data(client):
+    if client not in ("users", "organisations"):
+        response = make_response({"status": "error", "message": f"{client} not found"})
+        response.status = 400
+        return response
     result = find_id(request.headers.get('token'), "all", client)
     # check flag'client_id', if true - give result, else - error
     if result[1] == 'client_id':
@@ -309,9 +323,14 @@ def all_clients_data(client):
         response = make_response(result[0])
         response.status = result[1]
         return response
-"""
+
+#создаем нового клиента
 @app.route("/api/v1/<client>", methods=["PUT"])
 def new_client(client):
+    if client not in ("users", "organisations"):
+        response = make_response({"status": "error", "message": f"{client} not found"})
+        response.status = 400
+        return response
     result = find_id(request.headers.get('token'), "put", client)
     # check flag'client_id', if true - give result, else - error
     if result[1] == 'client_id':
@@ -320,4 +339,43 @@ def new_client(client):
         response = make_response(result[0])
         response.status = result[1]
         return response
-"""
+
+
+#обработка для функции провреки прав
+def get_permis(header, role_name, action):
+    if header:
+        token = json.loads(header)
+        #check client_id and permissions client_id
+        if token.get('client_id') or token.get('client_id') == 0:
+            client_id = token.get('client_id') - 1 
+            if client_id in range(len(array_users)): #на всякий случай проверим запрашиваюшего информацию
+                #check permissions
+                if isinstance(array_users[client_id].role[role_name], Permissions):
+                    if ((action == "create" and array_users[client_id].role[role_name].create) or
+                            (action == "read" and array_users[client_id].role[role_name].read) or
+                            (action == "update" and array_users[client_id].role[role_name].update) or
+                            (action == "delete" and array_users[client_id].role[role_name].delete)):
+                        return [{"status": "success", "message": "authorized"}, 200]    
+                    else:
+                        return [{"status": "error", "message": "not authorized"}, 403]
+                else:
+                    return [{"status": "error", "message": "not authorized"}, 403]
+            else:
+                return [{"status": "error", "message": f"No user with id = {client_id + 1}"}, 400]
+        else:
+            return [{"status": "error", "message": "Client_id in token header not found"}, 400]
+    else:
+        return [{"status": "error", "message": "Token header not found"}, 400]
+
+#проверяем права
+@app.route("/api/v1/<role_name>/authz/<action>", methods=["GET"])
+def check_permissions(role_name, action):
+    if role_name not in ("credits", "deposits", "debitaccounts", "creditaccounts", "users", "organisations", "identities") or action not in ("create", "read", "update", "delete"):
+        response = make_response({"status": "error", "message": f"{role_name} or {action} not found"})
+        response.status = 400
+        return response
+    else:
+        result = get_permis(request.headers.get('token'), role_name, action)
+        response = make_response(result[0])
+        response.status = result[1]
+        return response
