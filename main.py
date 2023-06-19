@@ -1,7 +1,8 @@
 import yaml
 from datetime import date
 import json
-from flask import Flask, abort, make_response
+from flask import Flask, request, make_response
+from operator import attrgetter
 
 app = Flask(__name__)
 
@@ -65,7 +66,10 @@ class Role:
         return self._name
 
     def __getitem__(self, key):
-        return self._role[key]
+        if key in self._role.keys():
+            return self._role[key]
+        else:
+            return False
     
     @property
     def to_dict(self):
@@ -184,11 +188,7 @@ def create_user(role, first_name, last_name, fathers_name, date_of_birth):
     )
     array_users.append(new_user)
 
-# ищем пользователя по id
-def find_id(client_id):
-    pass
-
-def some_main():
+def main():
     # создаем пустые массивы
     global array_users
     global array_roles
@@ -235,27 +235,89 @@ def some_main():
                 org["name"],
             )
         )
+    
+    # сортируем клиентов по client_id
+    array_users = sorted(array_users, key=attrgetter('client_id'))
 
     # создаём тестового пользователя
-    create_user("default", "Иванов", "Иван", "Иванович", 1999)
-    
-    # test
-#    print(array_users[0].role['users'].read)
-#    print(array_users[0].to_dict)
+    create_user("authn", "Иванов", "Иван", "Иванович", 1999)
 
+#выполним основной код для создания объектов
+main()
 
-@app.route("/api/v1/users/<int:client_id>", methods=["GET"])
-def client_data(client_id):
-    if array_users[0].role['users'].read:
-        return array_users[client_id - 1].to_dict
+# get all clients (users or organisations) in json
+def all_clients(user_type):
+    array = []
+    for client in array_users:
+        if user_type == "user" and isinstance(client, User):
+            array.append(client.to_dict)
+        elif user_type == "organisation" and isinstance(client, Organisation):
+            array.append(client.to_dict)
+    return [json.dumps(array, ensure_ascii=False),'client_id']
+
+#получаем client_id из заголовка token, проверяем его, получаем данные по required_id
+def find_id(header, required_id, role_name):
+    if role_name == "users":
+        user_type = "user"
+        class_user = User
+    elif role_name == "organisations":
+        user_type = "organisation"
+        class_user = Organisation
+    if header:
+        token = json.loads(header)
+        #check client_id and permissions client_id
+        if token.get('client_id') or token.get('client_id') == 0:
+            client_id = token.get('client_id')
+            if client_id - 1 in range(len(array_users)): #на всякий случай проверим запрашиваюшего информацию
+                if array_users[client_id - 1].role[role_name] and array_users[client_id - 1].role[role_name].read:
+                    #check required_id and return data
+                    if required_id == "all":
+                        return all_clients(user_type)
+                    elif required_id - 1 in range(len(array_users)) and isinstance(array_users[required_id -1], class_user):
+                        return [json.dumps(array_users[required_id - 1].to_dict, ensure_ascii=False), 'client_id']
+                    else:
+                        return [{"status": "error", "message": f"No {user_type} with id = {required_id}"}, 404]
+                else:
+                    return [{"status": "error", "message": f"Access is denied for user with id = {client_id}"}, 403]
+            else:
+                return [{"status": "error", "message": f"No user with id = {client_id}"}, 404]
+        else:
+            return [{"status": "error", "message": "Client_id in token header not found"}, 400]
     else:
-        pass
+        return [{"status": "error", "message": "Token header not found"}, 400]
 
+#получаем данные о пользователе
+@app.route("/api/v1/<client>/<int:client_id>", methods=["GET"])
+def client_data(client, client_id):
+    result = find_id(request.headers.get('token'), client_id, client)
+    # check flag'client_id', if true - give result, else - error
+    if result[1] == 'client_id':
+        return result[0]
+    else:
+        response = make_response(result[0])
+        response.status = result[1]
+        return response
 
-
-
-
-
-
-if __name__ == '__main__':
-    some_main()
+#получаем данные о всех пользователях
+@app.route("/api/v1/<client>", methods=["GET"])
+def all_clients_data(client):
+    result = find_id(request.headers.get('token'), "all", client)
+    # check flag'client_id', if true - give result, else - error
+    if result[1] == 'client_id':
+        return result[0]
+    else:
+        response = make_response(result[0])
+        response.status = result[1]
+        return response
+"""
+@app.route("/api/v1/<client>", methods=["PUT"])
+def new_client(client):
+    result = find_id(request.headers.get('token'), "put", client)
+    # check flag'client_id', if true - give result, else - error
+    if result[1] == 'client_id':
+        return result[0]
+    else:
+        response = make_response(result[0])
+        response.status = result[1]
+        return response
+"""
