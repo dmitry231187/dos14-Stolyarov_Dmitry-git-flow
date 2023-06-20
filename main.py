@@ -6,6 +6,7 @@ from operator import attrgetter
 
 app = Flask(__name__)
 
+
 class Permissions:
     def __init__(self, create=False, read=False, update=False, delete=False):
         self._create = create
@@ -48,11 +49,12 @@ class Permissions:
     @property
     def to_dict(self):
         return {
-                "create" : self._create,
-                "read" : self._read,
-                "update" : self._update,
-                "delete" : self._delete,
-                }
+            "create": self._create,
+            "read": self._read,
+            "update": self._update,
+            "delete": self._delete,
+        }
+
 
 class Role:
     def __init__(self, name, dict_with_permission):
@@ -70,16 +72,16 @@ class Role:
             return self._role[key]
         else:
             return False
-    
+
     @property
     def to_dict(self):
         permissions = {}
         for key, value in self._role.items():
             permissions[key] = value.to_dict
         return {
-                "name" : self._name,
-                "permissions" : permissions,
-                }
+            "name": self._name,
+            "permissions": permissions,
+        }
 
 
 class Client:
@@ -101,7 +103,15 @@ class Client:
 
 
 class User(Client):
-    def __init__(self, client_id: int, role, first_name, last_name, fathers_name, date_of_birth: int):
+    def __init__(
+        self,
+        client_id: int,
+        role,
+        first_name,
+        last_name,
+        fathers_name,
+        date_of_birth: int,
+    ):
         super().__init__(client_id, role)
         self._first_name = first_name
         self._last_name = last_name
@@ -131,13 +141,13 @@ class User(Client):
     @property
     def to_dict(self):
         return {
-                "client_id" : self._client_id,
-                "first_name" : self._first_name,
-                "last_name" : self._last_name,
-                "fathers_name" : self._fathers_name,
-                "date_of_birth" : self._date_of_birth,
-                "role" : self._role.to_dict,
-                }
+            "client_id": self._client_id,
+            "first_name": self._first_name,
+            "last_name": self._last_name,
+            "fathers_name": self._fathers_name,
+            "date_of_birth": self._date_of_birth,
+            "role": self._role.to_dict,
+        }
 
 
 class Organisation(Client):
@@ -158,16 +168,16 @@ class Organisation(Client):
     @property
     def name(self):
         return self._name
-    
+
     @property
     def to_dict(self):
         return {
-                "client_id" : self._client_id,
-                "creation_date" : self._creation_date,
-                "unp" : self._unp,
-                "name" : self._name,
-                "role" : self._role.to_dict,
-                }
+            "client_id": self._client_id,
+            "creation_date": self._creation_date,
+            "unp": self._unp,
+            "name": self._name,
+            "role": self._role.to_dict,
+        }
 
 
 class App(Client):
@@ -184,15 +194,28 @@ class App(Client):
 def create_user(data):
     client_id = array_users[-1].client_id + 1
     new_user = User(
-        client_id, array_roles[data["role"]], data["first_name"], data["last_name"], data["fathers_name"], int(data["date_of_birth"])
+        client_id,
+        array_roles[data["role"]],
+        data["first_name"],
+        data["last_name"],
+        data["fathers_name"],
+        int(data["date_of_birth"]),
     )
     array_users.append(new_user)
+
 
 # add new organisation
 def create_organisation(data):
     client_id = array_users[-1].client_id + 1
-    new_user = Organisation(client_id, array_roles[data["role"]], int(data["creation_date"]), int(data["unp"]), data["name"])
+    new_user = Organisation(
+        client_id,
+        array_roles[data["role"]],
+        int(data["creation_date"]),
+        int(data["unp"]),
+        data["name"],
+    )
     array_users.append(new_user)
+
 
 # write to json
 def write_json():
@@ -204,6 +227,7 @@ def write_json():
             clients["organisations"].append(client.to_dict)
     with open("users.json", "w") as f:
         json.dump(clients, f, ensure_ascii=False)
+
 
 def main():
     # создаем пустые массивы
@@ -252,16 +276,19 @@ def main():
                 org["name"],
             )
         )
-    
+
     # сортируем клиентов по client_id
-    array_users = sorted(array_users, key=attrgetter('client_id'))
+    array_users = sorted(array_users, key=attrgetter("client_id"))
 
     # создаём тестового пользователя
+
+
 #    create_user({"first_name": "Иван", "role": "authn", "last_name": "Иванов", "fathers_name": "Иванович", "date_of_birth": "1999"})
 #    write_json()
 
-#выполним основной код для создания объектов
+# выполним основной код для создания объектов
 main()
+
 
 # get and return all clients (users or organisations) in json
 def all_clients(user_type):
@@ -271,9 +298,10 @@ def all_clients(user_type):
             array.append(client.to_dict)
         elif user_type == "organisation" and isinstance(client, Organisation):
             array.append(client.to_dict)
-    return [json.dumps(array, ensure_ascii=False),'client_id']
+    return [json.dumps(array, ensure_ascii=False), "client_id"]
 
-#получаем client_id из заголовка token, проверяем его, получаем данные по required_id
+
+# получаем client_id из заголовка token, проверяем его, получаем данные по required_id
 def find_id(header, required_id, role_name, data):
     if role_name == "users":
         user_type = "user"
@@ -283,10 +311,12 @@ def find_id(header, required_id, role_name, data):
         class_user = Organisation
     if header:
         token = json.loads(header)
-        #check client_id and permissions client_id
-        if token.get('client_id') or token.get('client_id') == 0:
-            client_id = token.get('client_id') - 1
-            if client_id in range(len(array_users)): #на всякий случай проверим запрашиваюшего информацию
+        # check client_id and permissions client_id
+        if token.get("client_id") or token.get("client_id") == 0:
+            client_id = token.get("client_id") - 1
+            if client_id in range(
+                len(array_users)
+            ):  # на всякий случай проверим запрашиваюшего информацию
                 if isinstance(array_users[client_id].role[role_name], Permissions):
                     # check methods - put?
                     if required_id == "put":
@@ -299,107 +329,187 @@ def find_id(header, required_id, role_name, data):
                                 write_json()
                             return [{"status": "success", "message": "create"}, 200]
                         else:
-                            return [{"status": "error", "message": f"Access is denied for user with id = {client_id + 1}"}, 403]
-                    #check permissions for read
+                            return [
+                                {
+                                    "status": "error",
+                                    "message": f"Access is denied for user with id = {client_id + 1}",
+                                },
+                                403,
+                            ]
+                    # check permissions for read
                     if array_users[client_id].role[role_name].read:
-                        #check required_id and return data
+                        # check required_id and return data
                         if required_id == "all":
                             return all_clients(user_type)
-                        elif required_id - 1 in range(len(array_users)) and isinstance(array_users[required_id -1], class_user):
-                            return [json.dumps(array_users[required_id - 1].to_dict, ensure_ascii=False), 'client_id']
+                        elif required_id - 1 in range(len(array_users)) and isinstance(
+                            array_users[required_id - 1], class_user
+                        ):
+                            return [
+                                json.dumps(
+                                    array_users[required_id - 1].to_dict,
+                                    ensure_ascii=False,
+                                ),
+                                "client_id",
+                            ]
                         else:
-                            return [{"status": "error", "message": f"No {user_type} with id = {required_id}"}, 400]
+                            return [
+                                {
+                                    "status": "error",
+                                    "message": f"No {user_type} with id = {required_id}",
+                                },
+                                400,
+                            ]
                     else:
-                        return [{"status": "error", "message": f"Access is denied for user with id = {client_id + 1}"}, 403]
+                        return [
+                            {
+                                "status": "error",
+                                "message": f"Access is denied for user with id = {client_id + 1}",
+                            },
+                            403,
+                        ]
                 else:
-                    return [{"status": "error", "message": f"Access is denied for user with id = {client_id + 1}"}, 403]
+                    return [
+                        {
+                            "status": "error",
+                            "message": f"Access is denied for user with id = {client_id + 1}",
+                        },
+                        403,
+                    ]
             else:
-                return [{"status": "error", "message": f"No user with id = {client_id + 1}"}, 400]
+                return [
+                    {
+                        "status": "error",
+                        "message": f"No user with id = {client_id + 1}",
+                    },
+                    400,
+                ]
         else:
-            return [{"status": "error", "message": "Client_id in token header not found"}, 400]
+            return [
+                {"status": "error", "message": "Client_id in token header not found"},
+                400,
+            ]
     else:
         return [{"status": "error", "message": "Token header not found"}, 400]
 
-#получаем данные о пользователе
+
+# получаем данные о пользователе
 @app.route("/api/v1/<client>/<int:client_id>", methods=["GET"])
 def client_data(client, client_id):
     if client not in ("users", "organisations"):
         response = make_response({"status": "error", "message": f"{client} not found"})
         response.status = 400
         return response
-    result = find_id(request.headers.get('token'), client_id, client, False)
+    result = find_id(request.headers.get("token"), client_id, client, False)
     # check flag'client_id', if true - give result, else - error
-    if result[1] == 'client_id':
+    if result[1] == "client_id":
         return result[0]
     else:
         response = make_response(result[0])
         response.status = result[1]
         return response
 
-#получаем данные о всех пользователях
+
+# получаем данные о всех пользователях
 @app.route("/api/v1/<client>", methods=["GET"])
 def all_clients_data(client):
     if client not in ("users", "organisations"):
         response = make_response({"status": "error", "message": f"{client} not found"})
         response.status = 400
         return response
-    result = find_id(request.headers.get('token'), "all", client, False)
+    result = find_id(request.headers.get("token"), "all", client, False)
     # check flag'client_id', if true - give result, else - error
-    if result[1] == 'client_id':
+    if result[1] == "client_id":
         return result[0]
     else:
         response = make_response(result[0])
         response.status = result[1]
         return response
 
-#создаем нового клиента
+
+# создаем нового клиента
 @app.route("/api/v1/<client>", methods=["PUT"])
 def new_client(client):
     if client not in ("users", "organisations"):
         response = make_response({"status": "error", "message": f"{client} not found"})
         response.status = 400
         return response
-    result = find_id(request.headers.get('token'), "put", client, request.get_json())
+    result = find_id(request.headers.get("token"), "put", client, request.get_json())
     response = make_response(result[0])
     response.status = result[1]
     return response
 
 
-#обработка для функции провреки прав
+# обработка для функции провреки прав
 def get_permis(header, role_name, action):
     if header:
         token = json.loads(header)
-        #check client_id and permissions client_id
-        if token.get('client_id') or token.get('client_id') == 0:
-            client_id = token.get('client_id') - 1 
-            if client_id in range(len(array_users)): #на всякий случай проверим запрашиваюшего информацию
-                #check permissions
+        # check client_id and permissions client_id
+        if token.get("client_id") or token.get("client_id") == 0:
+            client_id = token.get("client_id") - 1
+            if client_id in range(
+                len(array_users)
+            ):  # на всякий случай проверим запрашиваюшего информацию
+                # check permissions
                 if isinstance(array_users[client_id].role[role_name], Permissions):
-                    if ((action == "create" and array_users[client_id].role[role_name].create) or
-                            (action == "read" and array_users[client_id].role[role_name].read) or
-                            (action == "update" and array_users[client_id].role[role_name].update) or
-                            (action == "delete" and array_users[client_id].role[role_name].delete)):
-                        return [{"status": "success", "message": "authorized"}, 200]    
+                    if (
+                        (
+                            action == "create"
+                            and array_users[client_id].role[role_name].create
+                        )
+                        or (
+                            action == "read"
+                            and array_users[client_id].role[role_name].read
+                        )
+                        or (
+                            action == "update"
+                            and array_users[client_id].role[role_name].update
+                        )
+                        or (
+                            action == "delete"
+                            and array_users[client_id].role[role_name].delete
+                        )
+                    ):
+                        return [{"status": "success", "message": "authorized"}, 200]
                     else:
                         return [{"status": "error", "message": "not authorized"}, 403]
                 else:
                     return [{"status": "error", "message": "not authorized"}, 403]
             else:
-                return [{"status": "error", "message": f"No user with id = {client_id + 1}"}, 400]
+                return [
+                    {
+                        "status": "error",
+                        "message": f"No user with id = {client_id + 1}",
+                    },
+                    400,
+                ]
         else:
-            return [{"status": "error", "message": "Client_id in token header not found"}, 400]
+            return [
+                {"status": "error", "message": "Client_id in token header not found"},
+                400,
+            ]
     else:
         return [{"status": "error", "message": "Token header not found"}, 400]
 
-#проверяем права
+
+# проверяем права
 @app.route("/api/v1/<role_name>/authz/<action>", methods=["GET"])
 def check_permissions(role_name, action):
-    if role_name not in ("credits", "deposits", "debitaccounts", "creditaccounts", "users", "organisations", "identities") or action not in ("create", "read", "update", "delete"):
-        response = make_response({"status": "error", "message": f"{role_name} or {action} not found"})
+    if role_name not in (
+        "credits",
+        "deposits",
+        "debitaccounts",
+        "creditaccounts",
+        "users",
+        "organisations",
+        "identities",
+    ) or action not in ("create", "read", "update", "delete"):
+        response = make_response(
+            {"status": "error", "message": f"{role_name} or {action} not found"}
+        )
         response.status = 400
         return response
     else:
-        result = get_permis(request.headers.get('token'), role_name, action)
+        result = get_permis(request.headers.get("token"), role_name, action)
         response = make_response(result[0])
         response.status = result[1]
         return response
