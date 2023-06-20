@@ -194,6 +194,17 @@ def create_organisation(data):
     new_user = Organisation(client_id, array_roles[data["role"]], int(data["creation_date"]), int(data["unp"]), data["name"])
     array_users.append(new_user)
 
+# write to json
+def write_json():
+    clients = {"users": [], "organisations": []}
+    for client in array_users:
+        if isinstance(client, User):
+            clients["users"].append(client.to_dict)
+        else:
+            clients["organisations"].append(client.to_dict)
+    with open("users.json", "w") as f:
+        json.dump(clients, f, ensure_ascii=False)
+
 def main():
     # создаем пустые массивы
     global array_users
@@ -246,7 +257,8 @@ def main():
     array_users = sorted(array_users, key=attrgetter('client_id'))
 
     # создаём тестового пользователя
-    create_user({"first_name": "Иван", "role": "authn", "last_name": "Иванов", "fathers_name": "Иванович", "date_of_birth": "1999"})
+#    create_user({"first_name": "Иван", "role": "authn", "last_name": "Иванов", "fathers_name": "Иванович", "date_of_birth": "1999"})
+#    write_json()
 
 #выполним основной код для создания объектов
 main()
@@ -281,9 +293,10 @@ def find_id(header, required_id, role_name, data):
                         if array_users[client_id].role[role_name].create:
                             if role_name == "users":
                                 create_user(data)
+                                write_json()
                             elif role_name == "organisations":
-                                pass
                                 create_organisation(data)
+                                write_json()
                             return [{"status": "success", "message": "create"}, 200]
                         else:
                             return [{"status": "error", "message": f"Access is denied for user with id = {client_id + 1}"}, 403]
