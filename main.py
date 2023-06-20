@@ -141,7 +141,7 @@ class User(Client):
 
 
 class Organisation(Client):
-    def __init__(self, client_id: int, role, creation_date, unp, name):
+    def __init__(self, client_id: int, role, creation_date: int, unp: int, name):
         super().__init__(client_id, role)
         self._creation_date = creation_date
         self._unp = unp
@@ -180,12 +180,18 @@ class App(Client):
         return self._name
 
 
-# функция добавления пользователя
-def create_user(role, first_name, last_name, fathers_name, date_of_birth):
+# add new user
+def create_user(data):
     client_id = array_users[-1].client_id + 1
     new_user = User(
-        client_id, array_roles[role], first_name, last_name, fathers_name, date_of_birth
+        client_id, array_roles[data["role"]], data["first_name"], data["last_name"], data["fathers_name"], int(data["date_of_birth"])
     )
+    array_users.append(new_user)
+
+# add new organisation
+def create_organisation(data):
+    client_id = array_users[-1].client_id + 1
+    new_user = Organisation(client_id, array_roles[data["role"]], int(data["creation_date"]), int(data["unp"]), data["name"])
     array_users.append(new_user)
 
 def main():
@@ -240,12 +246,12 @@ def main():
     array_users = sorted(array_users, key=attrgetter('client_id'))
 
     # создаём тестового пользователя
-    create_user("authn", "Иванов", "Иван", "Иванович", 1999)
+    create_user({"first_name": "Иван", "role": "authn", "last_name": "Иванов", "fathers_name": "Иванович", "date_of_birth": "1999"})
 
 #выполним основной код для создания объектов
 main()
 
-# get all clients (users or organisations) in json
+# get and return all clients (users or organisations) in json
 def all_clients(user_type):
     array = []
     for client in array_users:
@@ -256,7 +262,7 @@ def all_clients(user_type):
     return [json.dumps(array, ensure_ascii=False),'client_id']
 
 #получаем client_id из заголовка token, проверяем его, получаем данные по required_id
-def find_id(header, required_id, role_name):
+def find_id(header, required_id, role_name, data):
     if role_name == "users":
         user_type = "user"
         class_user = User
@@ -270,13 +276,22 @@ def find_id(header, required_id, role_name):
             client_id = token.get('client_id') - 1
             if client_id in range(len(array_users)): #на всякий случай проверим запрашиваюшего информацию
                 if isinstance(array_users[client_id].role[role_name], Permissions):
+                    # check methods - put?
+                    if required_id == "put":
+                        if array_users[client_id].role[role_name].create:
+                            if role_name == "users":
+                                create_user(data)
+                            elif role_name == "organisations":
+                                pass
+                                create_organisation(data)
+                            return [{"status": "success", "message": "create"}, 200]
+                        else:
+                            return [{"status": "error", "message": f"Access is denied for user with id = {client_id + 1}"}, 403]
+                    #check permissions for read
                     if array_users[client_id].role[role_name].read:
                         #check required_id and return data
                         if required_id == "all":
                             return all_clients(user_type)
-                        elif required_id == "put":
-                            pass # заготовка для метода put
-                            #return 
                         elif required_id - 1 in range(len(array_users)) and isinstance(array_users[required_id -1], class_user):
                             return [json.dumps(array_users[required_id - 1].to_dict, ensure_ascii=False), 'client_id']
                         else:
@@ -299,7 +314,7 @@ def client_data(client, client_id):
         response = make_response({"status": "error", "message": f"{client} not found"})
         response.status = 400
         return response
-    result = find_id(request.headers.get('token'), client_id, client)
+    result = find_id(request.headers.get('token'), client_id, client, False)
     # check flag'client_id', if true - give result, else - error
     if result[1] == 'client_id':
         return result[0]
@@ -315,7 +330,7 @@ def all_clients_data(client):
         response = make_response({"status": "error", "message": f"{client} not found"})
         response.status = 400
         return response
-    result = find_id(request.headers.get('token'), "all", client)
+    result = find_id(request.headers.get('token'), "all", client, False)
     # check flag'client_id', if true - give result, else - error
     if result[1] == 'client_id':
         return result[0]
@@ -331,14 +346,10 @@ def new_client(client):
         response = make_response({"status": "error", "message": f"{client} not found"})
         response.status = 400
         return response
-    result = find_id(request.headers.get('token'), "put", client)
-    # check flag'client_id', if true - give result, else - error
-    if result[1] == 'client_id':
-        return result[0]
-    else:
-        response = make_response(result[0])
-        response.status = result[1]
-        return response
+    result = find_id(request.headers.get('token'), "put", client, request.get_json())
+    response = make_response(result[0])
+    response.status = result[1]
+    return response
 
 
 #обработка для функции провреки прав
