@@ -282,8 +282,17 @@ def main():
 
     # создаём тестового пользователя
 
+    create_user(
+        {
+            "first_name": "Иван",
+            "role": "authn",
+            "last_name": "Иванов",
+            "fathers_name": "Иванович",
+            "date_of_birth": "1999",
+        }
+    )
 
-#    create_user({"first_name": "Иван", "role": "authn", "last_name": "Иванов", "fathers_name": "Иванович", "date_of_birth": "1999"})
+
 #    write_json()
 
 # выполним основной код для создания объектов
@@ -299,6 +308,28 @@ def all_clients(user_type):
         elif user_type == "organisation" and isinstance(client, Organisation):
             array.append(client.to_dict)
     return [json.dumps(array, ensure_ascii=False), "client_id"]
+
+
+# check input data in methods PUT
+def check_put_data(input_data, role_name):
+    if role_name == "users":
+        client_data = [
+            "role",
+            "first_name",
+            "last_name",
+            "fathers_name",
+            "date_of_birth",
+        ]
+    elif role_name == "organisations":
+        client_data = ["role", "creation_date", "unp", "name"]
+    else:
+        return False
+    if not isinstance(input_data, dict):
+        return False
+    for data in client_data:
+        if data not in input_data.keys():
+            return False
+    return True
 
 
 # получаем client_id из заголовка token, проверяем его, получаем данные по required_id
@@ -321,6 +352,15 @@ def find_id(header, required_id, role_name, data):
                     # check methods - put?
                     if required_id == "put":
                         if array_users[client_id].role[role_name].create:
+                            # check input data in methods PUT
+                            if not check_put_data(data, role_name):
+                                return [
+                                    {
+                                        "status": "error",
+                                        "message": f"Incorrect client data entered to create: {data}",
+                                    },
+                                    400,
+                                ]
                             if role_name == "users":
                                 create_user(data)
                                 write_json()
