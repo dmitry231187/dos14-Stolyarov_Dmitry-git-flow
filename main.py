@@ -248,7 +248,7 @@ def main():
         app_yaml = yaml.safe_load(f)
 
     for app in app_yaml["Apps"]:
-        apps.append(App(app["client_id"], app["role"], app["name"]))
+        apps.append(App(app["client_id"], roles[app["role"]], app["name"]))
 
     # получаем список пользователей и организаций
     with open("users.json", "r") as f:
@@ -280,16 +280,8 @@ def main():
     # сортируем клиентов по client_id
     clients = sorted(clients, key=attrgetter("client_id"))
 
-    # создаём тестового пользователя
-    create_user(
-        {
-            "first_name": "Иван",
-            "role": "authn",
-            "last_name": "Иванов",
-            "fathers_name": "Иванович",
-            "date_of_birth": "1999",
-        }
-    )
+   ## создаём тестового пользователя
+#    create_user({"first_name": "Иван", "role": "authn", "last_name": "Иванов", "fathers_name": "Иванович", "date_of_birth": "1999"})
 
 
 # выполним основной код для создания объектов
