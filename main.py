@@ -149,6 +149,16 @@ class User(Client):
             "role": self._role.to_dict,
         }
 
+    @property
+    def to_dict_write(self):
+        return {
+            "client_id": self._client_id,
+            "first_name": self._first_name,
+            "last_name": self._last_name,
+            "fathers_name": self._fathers_name,
+            "date_of_birth": self._date_of_birth,
+            "role": self._role.name,
+        }
 
 class Organisation(Client):
     def __init__(self, client_id: int, role, creation_date: int, unp: int, name):
@@ -179,6 +189,15 @@ class Organisation(Client):
             "role": self._role.to_dict,
         }
 
+    @property
+    def to_dict_write(self):
+        return {
+            "client_id": self._client_id,
+            "creation_date": self._creation_date,
+            "unp": self._unp,
+            "name": self._name,
+            "role": self._role.name,
+        }
 
 class App(Client):
     def __init__(self, client_id: int, role, name):
@@ -222,9 +241,9 @@ def write_json():
     write_clients = {"Users": [], "Organisations": []}
     for client in clients:
         if isinstance(client, User):
-            write_clients["Users"].append(client.to_dict)
+            write_clients["Users"].append(client.to_dict_write)
         else:
-            write_clients["Organisations"].append(client.to_dict)
+            write_clients["Organisations"].append(client.to_dict_write)
     with open("users.json", "w") as f:
         json.dump(write_clients, f, ensure_ascii=False)
 
@@ -282,7 +301,7 @@ def main():
 
    ## создаём тестового пользователя
 #    create_user({"first_name": "Иван", "role": "authn", "last_name": "Иванов", "fathers_name": "Иванович", "date_of_birth": "1999"})
-
+#    write_json()
 
 # выполним основной код для создания объектов
 main()
