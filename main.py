@@ -192,73 +192,73 @@ class App(Client):
 
 # add new user
 def create_user(data):
-    client_id = array_users[-1].client_id + 1
+    client_id = clients[-1].client_id + 1
     new_user = User(
         client_id,
-        array_roles[data["role"]],
+        roles[data["role"]],
         data["first_name"],
         data["last_name"],
         data["fathers_name"],
         int(data["date_of_birth"]),
     )
-    array_users.append(new_user)
+    clients.append(new_user)
 
 
 # add new organisation
 def create_organisation(data):
-    client_id = array_users[-1].client_id + 1
+    client_id = clients[-1].client_id + 1
     new_user = Organisation(
         client_id,
-        array_roles[data["role"]],
+        roles[data["role"]],
         int(data["creation_date"]),
         int(data["unp"]),
         data["name"],
     )
-    array_users.append(new_user)
+    clients.append(new_user)
 
 
 # write to json
 def write_json():
-    clients = {"users": [], "organisations": []}
-    for client in array_users:
+    write_clients = {"Users": [], "Organisations": []}
+    for client in clients:
         if isinstance(client, User):
-            clients["users"].append(client.to_dict)
+            write_clients["Users"].append(client.to_dict)
         else:
-            clients["organisations"].append(client.to_dict)
+            write_clients["Organisations"].append(client.to_dict)
     with open("users.json", "w") as f:
-        json.dump(clients, f, ensure_ascii=False)
+        json.dump(write_clients, f, ensure_ascii=False)
 
 
 def main():
     # создаем пустые массивы
-    global array_users
-    global array_roles
-    array_users = []
-    array_apps = []
-    array_roles = {}
+    global clients
+    global roles
+    clients = []
+    apps = []
+    roles = {}
 
     # получаем список roles
     with open("roles.yaml", "r") as f:
         roles_yaml = yaml.safe_load(f)
     for key in roles_yaml.keys():
-        array_roles[key] = Role(key, roles_yaml[key])
+        roles[key] = Role(key, roles_yaml[key])
 
-    # получаем список app
+    # получаем список apps
     with open("app.yaml", "r") as f:
         app_yaml = yaml.safe_load(f)
 
     for app in app_yaml["Apps"]:
-        array_apps.append(App(app["client_id"], app["role"], app["name"]))
+        apps.append(App(app["client_id"], app["role"], app["name"]))
 
     # получаем список пользователей и организаций
     with open("users.json", "r") as f:
         users_json = json.load(f)
 
     for usr in users_json["Users"]:
-        array_users.append(
+        clients.append(
             User(
                 usr["client_id"],
-                array_roles[usr["role"]],
+                roles[usr["role"]],
                 usr["first_name"],
                 usr["last_name"],
                 usr["fathers_name"],
@@ -267,10 +267,10 @@ def main():
         )
 
     for org in users_json["Organisations"]:
-        array_users.append(
+        clients.append(
             Organisation(
                 org["client_id"],
-                array_roles[org["role"]],
+                roles[org["role"]],
                 org["creation_date"],
                 org["unp"],
                 org["name"],
@@ -278,10 +278,9 @@ def main():
         )
 
     # сортируем клиентов по client_id
-    array_users = sorted(array_users, key=attrgetter("client_id"))
+    clients = sorted(clients, key=attrgetter("client_id"))
 
     # создаём тестового пользователя
-
     create_user(
         {
             "first_name": "Иван",
@@ -293,16 +292,14 @@ def main():
     )
 
 
-#    write_json()
-
 # выполним основной код для создания объектов
 main()
 
 
-# get and return all clients (users or organisations) in json
+# get and return all clients (users or organisations) to json str
 def all_clients(user_type):
     array = []
-    for client in array_users:
+    for client in clients:
         if user_type == "user" and isinstance(client, User):
             array.append(client.to_dict)
         elif user_type == "organisation" and isinstance(client, Organisation):
@@ -321,7 +318,12 @@ def check_put_data(input_data, role_name):
             "date_of_birth",
         ]
     elif role_name == "organisations":
-        client_data = ["role", "creation_date", "unp", "name"]
+        client_data = [
+            "role",
+            "creation_date",
+            "unp",
+            "name",
+        ]
     else:
         return False
     if not isinstance(input_data, dict):
@@ -335,32 +337,32 @@ def check_put_data(input_data, role_name):
 # получаем client_id из заголовка token, проверяем его, получаем данные по required_id
 def find_id(header, required_id, role_name, data):
     if role_name == "users":
-        user_type = "user"
-        class_user = User
+        client_type = "user"
+        client_class = User
     elif role_name == "organisations":
-        user_type = "organisation"
-        class_user = Organisation
+        client_type = "organisation"
+        client_class = Organisation
     if header:
         token = json.loads(header)
         # check client_id and permissions client_id
         if token.get("client_id") or token.get("client_id") == 0:
             client_id = token.get("client_id") - 1
-            if client_id in range(
-                len(array_users)
-            ):  # на всякий случай проверим запрашиваюшего информацию
-                if isinstance(array_users[client_id].role[role_name], Permissions):
+            # на всякий случай проверим запрашиваюшего
+            if client_id in range(len(clients)):
+                if isinstance(clients[client_id].role[role_name], Permissions):
                     # check methods - put?
                     if required_id == "put":
-                        if array_users[client_id].role[role_name].create:
+                        if clients[client_id].role[role_name].create:
                             # check input data in methods PUT
                             if not check_put_data(data, role_name):
                                 return [
                                     {
                                         "status": "error",
-                                        "message": f"Incorrect client data entered to create: {data}",
+                                        "message": f"Incorrect client data entered to create {client_type}: {data}",
                                     },
                                     400,
                                 ]
+                            # create user or organisation and write to file
                             if role_name == "users":
                                 create_user(data)
                                 write_json()
@@ -372,21 +374,21 @@ def find_id(header, required_id, role_name, data):
                             return [
                                 {
                                     "status": "error",
-                                    "message": f"Access is denied for user with id = {client_id + 1}",
+                                    "message": f"Access is denied for client with id = {client_id + 1}",
                                 },
                                 403,
                             ]
                     # check permissions for read
-                    if array_users[client_id].role[role_name].read:
-                        # check required_id and return data
+                    if clients[client_id].role[role_name].read:
+                        # check required_id and return json clients data
                         if required_id == "all":
-                            return all_clients(user_type)
-                        elif required_id - 1 in range(len(array_users)) and isinstance(
-                            array_users[required_id - 1], class_user
+                            return all_clients(client_type)
+                        elif required_id - 1 in range(len(clients)) and isinstance(
+                            clients[required_id - 1], client_class
                         ):
                             return [
                                 json.dumps(
-                                    array_users[required_id - 1].to_dict,
+                                    clients[required_id - 1].to_dict,
                                     ensure_ascii=False,
                                 ),
                                 "client_id",
@@ -395,7 +397,7 @@ def find_id(header, required_id, role_name, data):
                             return [
                                 {
                                     "status": "error",
-                                    "message": f"No {user_type} with id = {required_id}",
+                                    "message": f"No {client_type} with id = {required_id}",
                                 },
                                 400,
                             ]
@@ -403,7 +405,7 @@ def find_id(header, required_id, role_name, data):
                         return [
                             {
                                 "status": "error",
-                                "message": f"Access is denied for user with id = {client_id + 1}",
+                                "message": f"Access is denied for client with id = {client_id + 1}",
                             },
                             403,
                         ]
@@ -411,7 +413,7 @@ def find_id(header, required_id, role_name, data):
                     return [
                         {
                             "status": "error",
-                            "message": f"Access is denied for user with id = {client_id + 1}",
+                            "message": f"Access is denied for client with id = {client_id + 1}",
                         },
                         403,
                     ]
@@ -419,7 +421,7 @@ def find_id(header, required_id, role_name, data):
                 return [
                     {
                         "status": "error",
-                        "message": f"No user with id = {client_id + 1}",
+                        "message": f"No client with id = {client_id + 1}",
                     },
                     400,
                 ]
@@ -486,27 +488,25 @@ def get_permis(header, role_name, action):
         # check client_id and permissions client_id
         if token.get("client_id") or token.get("client_id") == 0:
             client_id = token.get("client_id") - 1
-            if client_id in range(
-                len(array_users)
-            ):  # на всякий случай проверим запрашиваюшего информацию
+            # на всякий случай проверим запрашиваюшего
+            if client_id in range(len(clients)):
                 # check permissions
-                if isinstance(array_users[client_id].role[role_name], Permissions):
+                if isinstance(clients[client_id].role[role_name], Permissions):
                     if (
                         (
                             action == "create"
-                            and array_users[client_id].role[role_name].create
+                            and clients[client_id].role[role_name].create
                         )
                         or (
-                            action == "read"
-                            and array_users[client_id].role[role_name].read
+                            action == "read" and clients[client_id].role[role_name].read
                         )
                         or (
                             action == "update"
-                            and array_users[client_id].role[role_name].update
+                            and clients[client_id].role[role_name].update
                         )
                         or (
                             action == "delete"
-                            and array_users[client_id].role[role_name].delete
+                            and clients[client_id].role[role_name].delete
                         )
                     ):
                         return [{"status": "success", "message": "authorized"}, 200]
@@ -518,7 +518,7 @@ def get_permis(header, role_name, action):
                 return [
                     {
                         "status": "error",
-                        "message": f"No user with id = {client_id + 1}",
+                        "message": f"No client with id = {client_id + 1}",
                     },
                     400,
                 ]
