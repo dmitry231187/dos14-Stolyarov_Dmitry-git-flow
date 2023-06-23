@@ -160,6 +160,7 @@ class User(Client):
             "role": self._role.name,
         }
 
+
 class Organisation(Client):
     def __init__(self, client_id: int, role, creation_date: int, unp: int, name):
         super().__init__(client_id, role)
@@ -198,6 +199,7 @@ class Organisation(Client):
             "name": self._name,
             "role": self._role.name,
         }
+
 
 class App(Client):
     def __init__(self, client_id: int, role, name):
@@ -242,7 +244,7 @@ def write_json():
     for client in clients:
         if isinstance(client, User):
             write_clients["Users"].append(client.to_dict_write)
-        else:
+        elif isinstance(client, Organisation):
             write_clients["Organisations"].append(client.to_dict_write)
     with open("users.json", "w") as f:
         json.dump(write_clients, f, ensure_ascii=False)
@@ -253,7 +255,7 @@ def main():
     global clients
     global roles
     clients = []
-    apps = []
+    #    apps = []
     roles = {}
 
     # получаем список roles
@@ -267,7 +269,7 @@ def main():
         app_yaml = yaml.safe_load(f)
 
     for app in app_yaml["Apps"]:
-        apps.append(App(app["client_id"], roles[app["role"]], app["name"]))
+        clients.append(App(app["client_id"], roles[app["role"]], app["name"]))
 
     # получаем список пользователей и организаций
     with open("users.json", "r") as f:
@@ -299,7 +301,7 @@ def main():
     # сортируем клиентов по client_id
     clients = sorted(clients, key=attrgetter("client_id"))
 
-   ## создаём тестового пользователя
+    ## создаём тестового пользователя
 #    create_user({"first_name": "Иван", "role": "authn", "last_name": "Иванов", "fathers_name": "Иванович", "date_of_birth": "1999"})
 #    write_json()
 
@@ -357,13 +359,13 @@ def find_id(header, required_id, role_name, data):
         token = json.loads(header)
         # check client_id and permissions client_id
         if token.get("client_id") or token.get("client_id") == 0:
-            client_id = token.get("client_id") - 1
+            client_id = token.get("client_id")
             # на всякий случай проверим запрашиваюшего
-            if client_id in range(len(clients)):
-                if isinstance(clients[client_id].role[role_name], Permissions):
+            if client_id in range(1, len(clients) - 1):
+                if isinstance(clients[client_id + 1].role[role_name], Permissions):
                     # check methods - put?
                     if required_id == "put":
-                        if clients[client_id].role[role_name].create:
+                        if clients[client_id + 1].role[role_name].create:
                             # check input data in methods PUT
                             if not check_put_data(data, role_name):
                                 return [
@@ -385,21 +387,21 @@ def find_id(header, required_id, role_name, data):
                             return [
                                 {
                                     "status": "error",
-                                    "message": f"Access is denied for client with id = {client_id + 1}",
+                                    "message": f"Access is denied for client with id = {client_id}",
                                 },
                                 403,
                             ]
                     # check permissions for read
-                    if clients[client_id].role[role_name].read:
+                    if clients[client_id + 1].role[role_name].read:
                         # check required_id and return json clients data
                         if required_id == "all":
                             return all_clients(client_type)
-                        elif required_id - 1 in range(len(clients)) and isinstance(
-                            clients[required_id - 1], client_class
+                        elif required_id in range(1, len(clients) - 1) and isinstance(
+                            clients[required_id + 1], client_class
                         ):
                             return [
                                 json.dumps(
-                                    clients[required_id - 1].to_dict,
+                                    clients[required_id + 1].to_dict,
                                     ensure_ascii=False,
                                 ),
                                 "client_id",
@@ -416,7 +418,7 @@ def find_id(header, required_id, role_name, data):
                         return [
                             {
                                 "status": "error",
-                                "message": f"Access is denied for client with id = {client_id + 1}",
+                                "message": f"Access is denied for client with id = {client_id}",
                             },
                             403,
                         ]
@@ -424,7 +426,7 @@ def find_id(header, required_id, role_name, data):
                     return [
                         {
                             "status": "error",
-                            "message": f"Access is denied for client with id = {client_id + 1}",
+                            "message": f"Access is denied for client with id = {client_id}",
                         },
                         403,
                     ]
@@ -432,7 +434,7 @@ def find_id(header, required_id, role_name, data):
                 return [
                     {
                         "status": "error",
-                        "message": f"No client with id = {client_id + 1}",
+                        "message": f"No client with id = {client_id}",
                     },
                     400,
                 ]
@@ -498,26 +500,27 @@ def get_permis(header, role_name, action):
         token = json.loads(header)
         # check client_id and permissions client_id
         if token.get("client_id") or token.get("client_id") == 0:
-            client_id = token.get("client_id") - 1
+            client_id = token.get("client_id")
             # на всякий случай проверим запрашиваюшего
-            if client_id in range(len(clients)):
+            if client_id in range(1, len(clients) - 1):
                 # check permissions
-                if isinstance(clients[client_id].role[role_name], Permissions):
+                if isinstance(clients[client_id + 1].role[role_name], Permissions):
                     if (
                         (
                             action == "create"
-                            and clients[client_id].role[role_name].create
+                            and clients[client_id + 1].role[role_name].create
                         )
                         or (
-                            action == "read" and clients[client_id].role[role_name].read
+                            action == "read"
+                            and clients[client_id + 1].role[role_name].read
                         )
                         or (
                             action == "update"
-                            and clients[client_id].role[role_name].update
+                            and clients[client_id + 1].role[role_name].update
                         )
                         or (
                             action == "delete"
-                            and clients[client_id].role[role_name].delete
+                            and clients[client_id + 1].role[role_name].delete
                         )
                     ):
                         return [{"status": "success", "message": "authorized"}, 200]
@@ -529,7 +532,7 @@ def get_permis(header, role_name, action):
                 return [
                     {
                         "status": "error",
-                        "message": f"No client with id = {client_id + 1}",
+                        "message": f"No client with id = {client_id}",
                     },
                     400,
                 ]
