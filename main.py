@@ -255,7 +255,6 @@ def main():
     global clients
     global roles
     clients = []
-    #    apps = []
     roles = {}
 
     # получаем список roles
@@ -300,10 +299,6 @@ def main():
 
     # сортируем клиентов по client_id
     clients = sorted(clients, key=attrgetter("client_id"))
-
-    ## создаём тестового пользователя
-#    create_user({"first_name": "Иван", "role": "authn", "last_name": "Иванов", "fathers_name": "Иванович", "date_of_birth": "1999"})
-#    write_json()
 
 # выполним основной код для создания объектов
 main()
@@ -361,7 +356,9 @@ def find_id(header, required_id, role_name, data):
         if token.get("client_id") or token.get("client_id") == 0:
             client_id = token.get("client_id")
             # на всякий случай проверим запрашиваюшего
-            if client_id in range(1, len(clients) - 1):
+            if client_id in range(-2, len(clients) - 1) and client_id != 0:
+                if client_id < 0:
+                    client_id += 1
                 if isinstance(clients[client_id + 1].role[role_name], Permissions):
                     # check methods - put?
                     if required_id == "put":
@@ -384,6 +381,8 @@ def find_id(header, required_id, role_name, data):
                                 write_json()
                             return [{"status": "success", "message": "create"}, 200]
                         else:
+                            if client_id < 0:
+                                client_id -= 1
                             return [
                                 {
                                     "status": "error",
@@ -415,6 +414,8 @@ def find_id(header, required_id, role_name, data):
                                 400,
                             ]
                     else:
+                        if client_id < 0:
+                            client_id -= 1
                         return [
                             {
                                 "status": "error",
@@ -423,6 +424,8 @@ def find_id(header, required_id, role_name, data):
                             403,
                         ]
                 else:
+                    if client_id < 0:
+                        client_id -= 1
                     return [
                         {
                             "status": "error",
@@ -431,6 +434,8 @@ def find_id(header, required_id, role_name, data):
                         403,
                     ]
             else:
+                if client_id < 0:
+                    client_id -= 1
                 return [
                     {
                         "status": "error",
@@ -502,7 +507,9 @@ def get_permis(header, role_name, action):
         if token.get("client_id") or token.get("client_id") == 0:
             client_id = token.get("client_id")
             # на всякий случай проверим запрашиваюшего
-            if client_id in range(1, len(clients) - 1):
+            if client_id in range(-2, len(clients) - 1) and client_id != 0:
+                if client_id < 0:
+                    client_id += 1
                 # check permissions
                 if isinstance(clients[client_id + 1].role[role_name], Permissions):
                     if (
@@ -529,6 +536,8 @@ def get_permis(header, role_name, action):
                 else:
                     return [{"status": "error", "message": "not authorized"}, 403]
             else:
+                if client_id < 0:
+                    client_id -= 1
                 return [
                     {
                         "status": "error",
