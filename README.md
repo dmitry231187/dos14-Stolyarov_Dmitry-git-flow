@@ -142,3 +142,17 @@ There are my homeworks
       * Если есть 200 и {"status": "success", "message": "authorized"}
         * Если нет или, что то пошло не так то  403 {"status": "error", "message": "not authorized"}
 
+#домашка #hw20_22
+Домашка на 3 занятия. Задеплоить ваше приложение (authn/authz/bank) на Ubuntu 22.04 c помощью ansible
+* установить ansible
+* mkdir ansible в репозитории 
+* Создать пользователя authn/authz/bank
+* Установить git, 2.40.1
+* Установить python 3.11
+* Установить poetry
+* Склонить репозиторий 
+* poetry install
+* poetry run flask —app main.py run (systemd service)
+* start systemd service
+
+
