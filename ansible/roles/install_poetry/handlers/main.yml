@@ -1,0 +1,5 @@
+- name: Poetry project install
+  become: true
+  become_user: "{{ user_name }}"
+  shell: poetry install chdir=/home/{{ user_name }}/git
+

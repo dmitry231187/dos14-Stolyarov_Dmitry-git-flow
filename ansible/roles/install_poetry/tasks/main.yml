@@ -1,0 +1,9 @@
+- name: Clone git repo
+  become: true
+  git:
+    repo: "{{ git_clone_url }}"
+    dest: /home/authz/git
+    version: master
+    force: yes
+  notify:
+  - Poetry project install

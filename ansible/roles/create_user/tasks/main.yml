@@ -1,0 +1,11 @@
+---
+# tasks file for create_user
+
+- name: Create "{{ user_name }}" user
+  user:
+    name: "{{ user_name }}"
+    groups: sudo
+    shell: /bin/bash
+    password: "{{ user_passwd }}"
+    append: yes
+  become: true
