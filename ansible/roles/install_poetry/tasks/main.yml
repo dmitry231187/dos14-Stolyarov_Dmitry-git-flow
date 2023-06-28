@@ -7,8 +7,8 @@
   become: true
   git:
     repo: "{{ git_clone_url }}"
-    dest: /home/authz/git
-    version: master
+    dest: /home/{{ user_name }}/git
+    version: "{{ git_branch }}"
     force: yes
 - name: Poetry project install
   become: true
