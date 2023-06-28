@@ -24,16 +24,13 @@
     dest: /tmp/
     remote_src: true
   when: git_result.stat.exists == False
-      #  when: host_git_version["stdout"] != "git version {{ git_version }}"
 - name: Make git {{ git_version }}
   shell: make chdir=/tmp/git-{{ git_version }} prefix=/usr/local all
   when: git_result.stat.exists == False
-    #  when: host_git_version["stdout"] != "git version {{ git_version }}"
 - name: Install git {{ git_version }}
   become: true
   shell: make chdir=/tmp/git-{{ git_version }} prefix=/usr/local install
   when: git_result.stat.exists == False
-    #  when: host_git_version["stdout"] != "git version {{ git_version }}"
 - name: Check that the /usr/local/bin/python{{ host_python_version }} exists
   stat:
     path: /usr/local/bin/python{{ host_python_version }}
@@ -50,7 +47,6 @@
     - build-essential
     - libsqlite3-dev
     - libreadline-dev
-      #    - libreadline-gplv2-dev
     - libncursesw5-dev
     - libssl-dev
     - libgdbm-dev
