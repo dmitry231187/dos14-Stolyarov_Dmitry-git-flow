@@ -4,16 +4,8 @@
 - name: Install packages needed for installing git
   become: true
   apt: 
-    pkg: "{{ item }}"
+    pkg: ['libz-dev', 'libssl-dev', 'libcurl4-gnutls-dev', 'libexpat1-dev', 'gettext', 'cmake', 'gcc']
     state: present
-  with_items:
-    - libz-dev
-    - libssl-dev
-    - libcurl4-gnutls-dev
-    - libexpat1-dev
-    - gettext
-    - cmake
-    - gcc
 - name: Check installed git {{ git_version }}
   stat:
     path: /tmp/git-{{ git_version }}
@@ -38,24 +30,8 @@
 - name: Install packages needed for installing python and install python {{ python_version }}
   become: true
   apt: 
-    pkg: "{{ item }}"
+    pkg: ['wget', 'xz-utils', 'checkinstall', 'build-essential', 'libsqlite3-dev', 'libreadline-dev', 'libncursesw5-dev', 'libssl-dev', 'libgdbm-dev', 'libc6-dev', 'libbz2-dev', 'libffi-dev', 'zlib1g-dev', 'tk-dev', 'openssl']
     state: present
-  with_items:
-    - wget
-    - xz-utils
-    - checkinstall
-    - build-essential
-    - libsqlite3-dev
-    - libreadline-dev
-    - libncursesw5-dev
-    - libssl-dev
-    - libgdbm-dev
-    - libc6-dev
-    - libbz2-dev
-    - libffi-dev
-    - zlib1g-dev
-    - tk-dev
-    - openssl
   when: python_result.stat.exists == False
 - name: Download and unarchive python {{ python_version }} to /tmp/python-{{ python_version }}
   unarchive:
