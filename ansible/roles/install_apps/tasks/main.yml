@@ -1,0 +1,63 @@
+- name: Update apt-cache
+  become: true
+  apt: update_cache=yes
+- name: Install packages needed for installing git
+  become: true
+  apt: 
+    pkg: ['libz-dev', 'libssl-dev', 'libcurl4-gnutls-dev', 'libexpat1-dev', 'gettext', 'cmake', 'gcc']
+    state: present
+- name: Check installed git {{ git_version }}
+  stat:
+    path: /tmp/git-{{ git_version }}
+  register: git_result
+- name: Download and unarchive git {{ git_version }} to /tmp/git-{{ git_version }}
+  unarchive:
+    src: https://github.com/git/git/archive/refs/tags/v{{ git_version }}.tar.gz
+    dest: /tmp/
+    remote_src: true
+  when: git_result.stat.exists == False
+- name: Make git {{ git_version }}
+  shell: make chdir=/tmp/git-{{ git_version }} prefix=/usr/local all
+  when: git_result.stat.exists == False
+- name: Install git {{ git_version }}
+  become: true
+  shell: make chdir=/tmp/git-{{ git_version }} prefix=/usr/local install
+  when: git_result.stat.exists == False
+- name: Check that the /usr/local/bin/python{{ host_python_version }} exists
+  stat:
+    path: /usr/local/bin/python{{ host_python_version }}
+  register: python_result
+- name: Install packages needed for installing python and install python {{ python_version }}
+  become: true
+  apt: 
+    pkg: ['wget', 'xz-utils', 'checkinstall', 'build-essential', 'libsqlite3-dev', 'libreadline-dev', 'libncursesw5-dev', 'libssl-dev', 'libgdbm-dev', 'libc6-dev', 'libbz2-dev', 'libffi-dev', 'zlib1g-dev', 'tk-dev', 'openssl']
+    state: present
+  when: python_result.stat.exists == False
+- name: Download and unarchive python {{ python_version }} to /tmp/python-{{ python_version }}
+  unarchive:
+    src: https://www.python.org/ftp/python/{{ python_version }}/Python-{{ python_version }}.tgz
+    dest: /tmp/
+    remote_src: true
+  when: python_result.stat.exists == False
+- name: Configure python {{ python_version }}
+  shell: ./configure --enable-optimizations chdir=/tmp/Python-{{ python_version }}
+  when: python_result.stat.exists == False
+- name: Make python {{ python_version }}
+  shell: make -j $(nproc) chdir=/tmp/Python-{{ python_version }}
+  when: python_result.stat.exists == False
+- name: Install python {{ python_version }}
+  become: true
+  shell: make altinstall chdir=/tmp/Python-{{ python_version }}
+  when: python_result.stat.exists == False
+- name: Install pip
+  become: true
+  apt:
+    name: python3-pip
+    state: present
+    update_cache: true
+- name: Install poetry
+  pip:
+    name: poetry
+    state: present
+  become: true
+

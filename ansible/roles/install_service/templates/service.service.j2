@@ -1,0 +1,13 @@
+[Unit]
+Description={{ user_name }}-service.service
+After=network.target
+
+[Service]
+Type=simple
+User={{ user_name }}
+WorkingDirectory=/home/{{ user_name }}/git
+ExecStart=/bin/bash -c "poetry run flask --app main.py run"
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
