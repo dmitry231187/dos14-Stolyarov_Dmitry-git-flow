@@ -9,5 +9,5 @@ services:
     networks: 
       - docker_network
     ports:
-      - 5000:5000
+      - "5000:5000"
 
