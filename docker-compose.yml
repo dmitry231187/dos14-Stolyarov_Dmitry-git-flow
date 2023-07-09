@@ -1,13 +1,13 @@
 version: '3.4'
-networks:
-  docker_network:
-    name: authz_network
+  #networks:
+  #  docker_network:
+  #    name: authz_network
 services:
   authz:
     image: dmitry231187/hw25:latest
     build: .
-    networks: 
-      - docker_network
+      #    networks: 
+      #      - docker_network
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
 
