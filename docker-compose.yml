@@ -6,7 +6,8 @@ services:
   authz:
     image: dmitry231187/hw25:latest
     build: .
-    networks: docker_network
+    networks: 
+      - docker_network
     ports:
       - 5000:5000
 
