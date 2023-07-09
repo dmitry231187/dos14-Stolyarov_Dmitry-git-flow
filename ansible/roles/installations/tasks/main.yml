@@ -55,7 +55,7 @@
         update_cache: true
     - name: Install Docker Engine, containerd, and Docker Compose
       apt:
-        pkg: ['docker-ce', 'docker-ce-cli', 'containerd.io', 'docker-buildx-plugin', 'docker-compose-plugin']
+        pkg: ['docker-ce', 'docker-ce-cli', 'containerd.io', 'docker-buildx-plugin', 'docker-compose-plugin', 'docker-compose']
         state: present
     - name: Create flag Docker installed
       file:
