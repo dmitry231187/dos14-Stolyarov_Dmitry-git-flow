@@ -1,9 +1,12 @@
 version: '3'
+networks:
+  docker_network:
+    name: authz_network
 services:
   authz:
     image: dmitry231187/hw25:latest
     build: .
-    network_mode: host
+    networks: docker_network
     ports:
       - 5000:5000
 
