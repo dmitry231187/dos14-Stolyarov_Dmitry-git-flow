@@ -6,10 +6,11 @@
     git_version: "2.40.1"
     git_clone_url: "https://github.com/dmitry231187/dos14-Stolyarov_Dmitry-git-flow.git"
     git_branch: "master"
-    python_version: "3.11.4"
-    host_python_version: "3.11"
+      #    python_version: "3.11.4"
+      #    host_python_version: "3.11"
   roles:
     - role: create_user
-    - role: install_apps
-    - role: install_poetry
-    - role: install_service
+      #- role: install_apps
+      #- role: install_poetry
+      #- role: install_service
+    - role: installations
