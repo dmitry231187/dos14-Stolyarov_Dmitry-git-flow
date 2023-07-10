@@ -41,6 +41,14 @@
         pkg: ['ca-certificates', 'gnupg']
         state: present
         update_cache: true
+    - name:
+      become: true
+      file:
+        path: /etc/apt/keyrings
+        owner: root
+        group: root
+        mode: '0755'
+        state: directory
     - name: Add Docker’s official GPG key
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
