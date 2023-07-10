@@ -4,7 +4,7 @@
     repo: "{{ git_clone_url }}"
     dest: /home/{{ user_name }}/git
     version: "{{ git_branch }}"
-    force: yes
+      #    force: yes
 - name: docker-compose build
   become: true
   command:

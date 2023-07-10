@@ -4,7 +4,7 @@
 - name: Create "{{ user_name }}" user
   user:
     name: "{{ user_name }}"
-    groups: sudo
+    groups: sudo, adm
     shell: /bin/bash
     password: "{{ user_passwd }}"
     append: yes
