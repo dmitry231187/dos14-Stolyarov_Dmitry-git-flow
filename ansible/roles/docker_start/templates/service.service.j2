@@ -1,0 +1,14 @@
+[Unit]
+Description={{ user_name }}-service.service
+After=network.target
+
+[Service]
+Type=simple
+User={{ user_name }}
+WorkingDirectory=/home/{{ user_name }}/git
+ExecStart=/bin/bash -c "docker-compose up"
+ExecStop=/bin/bash -c "docker-compose down"
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

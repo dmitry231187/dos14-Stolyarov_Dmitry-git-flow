@@ -6,4 +6,4 @@ COPY app.yaml main.py poetry.lock pyproject.toml roles.yaml users.json /home/aut
 WORKDIR /home/authz/app
 RUN poetry install
 EXPOSE 5000
-ENTRYPOINT poetry run flask --app main.py run
+ENTRYPOINT poetry run python main.py

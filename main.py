@@ -250,7 +250,7 @@ def write_json():
         json.dump(write_clients, f, ensure_ascii=False)
 
 
-def main():
+def some_main():
     # создаем пустые массивы
     global clients
     global roles
@@ -299,9 +299,6 @@ def main():
 
     # сортируем клиентов по client_id
     clients = sorted(clients, key=attrgetter("client_id"))
-
-# выполним основной код для создания объектов
-main()
 
 
 # get and return all clients (users or organisations) to json str
@@ -576,3 +573,8 @@ def check_permissions(role_name, action):
         response = make_response(result[0])
         response.status = result[1]
         return response
+
+
+if __name__ == "__main__":
+    some_main()
+    app.run(host='0.0.0.0', port=5000, debug=False)
