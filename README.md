@@ -155,4 +155,10 @@ There are my homeworks
 * poetry run flask —app main.py run (systemd service)
 * start systemd service
 
+#домашка #hw25
+* Cоздать Dockerfile для нашего приложения (процесс в контейнере должен выполнятся не от root)
+* Build/Push образа на dockerhub
+* cоздать docker-compose файл который запускает наше приложение
+* Переписать ansible role на запуск приложения через docker-compose
+
 

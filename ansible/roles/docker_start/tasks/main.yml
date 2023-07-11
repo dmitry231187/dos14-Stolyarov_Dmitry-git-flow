@@ -1,0 +1,31 @@
+- name: Add {{ user_name }} into "docker" group
+  become: true
+  user:
+    name: "{{ user_name }}"
+    groups: docker
+    append: true
+- name: Clone git repo
+  become: true
+  git:
+    repo: "{{ git_clone_url }}"
+    dest: /home/{{ user_name }}/git
+    version: "{{ git_branch }}"
+    force: yes
+- name: docker-compose build
+  become: true
+  command:
+    cmd: "docker-compose build"
+    chdir: /home/{{ user_name }}/git
+- name: Create {{ user_name }}-service
+  become: true
+  template:
+    src: service.service.j2
+    dest: /etc/systemd/system/{{ user_name }}-service.service
+    mode: '755'
+- name: Install our service
+  become: true
+  systemd:
+    name: "{{ user_name }}-service.service"
+    enabled: true
+    masked: false
+    state: started
