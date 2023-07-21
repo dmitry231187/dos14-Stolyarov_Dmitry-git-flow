@@ -578,3 +578,11 @@ def check_permissions(role_name, action):
 if __name__ == "__main__":
     some_main()
     app.run(host='0.0.0.0', port=5000, debug=False)
+
+
+#return 200
+@app.route("api/v1/authz/health_check", methods=["GET"])
+def health_check():
+    response = make_response({"status": "success", "message": "health ok"})
+    response.status = 200
+    return response
