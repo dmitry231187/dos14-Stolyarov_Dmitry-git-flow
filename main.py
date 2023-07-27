@@ -581,7 +581,7 @@ if __name__ == "__main__":
 
 
 #return 200
-@app.route("api/v1/authz/health_check", methods=["GET"])
+@app.route("/api/v1/authz/health_check", methods=["GET"])
 def health_check():
     response = make_response({"status": "success", "message": "health ok"})
     response.status = 200
