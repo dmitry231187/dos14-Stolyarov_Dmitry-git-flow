@@ -1,5 +1,4 @@
 FROM nginx:1.25.1-alpine-slim
 MAINTAINER leshiy74@yandex.ru
-COPY ./nginx.conf /etc/nginx
-COPY ./authz.conf ./logging.conf /etc/nginx/conf.d
+COPY ./authz.conf /etc/nginx/conf.d && ./logging.conf /etc/nginx/conf.d && ./nginx.conf /etc/nginx
 EXPOSE 80
