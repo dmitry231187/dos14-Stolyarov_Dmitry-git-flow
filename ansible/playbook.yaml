@@ -5,7 +5,7 @@
     user_passwd: "$6$y1S/6eRhcBJeoSvs$1ooURwMYBfNBlDfh532undqVcVVLq3YncKKt60utzVcbFLfiRwZ3mdw9ebF.sQ80wSqY6EyJJXD02uTtd0z/M."
     git_version: "2.40.1"
     git_clone_url: "https://github.com/dmitry231187/dos14-Stolyarov_Dmitry-git-flow.git"
-    git_branch: "feature-hw-26"
+    git_branch: "develop"
       #    python_version: "3.11.4"
       #    host_python_version: "3.11"
   roles:
