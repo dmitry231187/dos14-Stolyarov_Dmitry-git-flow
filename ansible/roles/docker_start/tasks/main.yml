@@ -19,6 +19,16 @@
         name: "{{ user_name }}-service.service"
         state: stopped
       ignore_errors: true
+    - name: Remove old docker image authz
+      community.docker.docker_image:
+        state: absent
+        name: git_authz
+      ignore_errors: true
+    - name: Remove old docker image nginx
+      community.docker.docker_image:
+        state: absent
+        name: git_nginx
+      ignore_errors: true
     - name: Docker-compose build
       command:
         cmd: "docker-compose build"
