@@ -574,6 +574,13 @@ def check_permissions(role_name, action):
         response.status = result[1]
         return response
 
+# check health, return 200
+#return 200
+@app.route("/api/v1/authz/health_check", methods=["GET"])
+def health_check():
+    response = make_response({"status": "success", "message": "health ok"})
+    response.status = 200
+    return response
 
 if __name__ == "__main__":
     some_main()
