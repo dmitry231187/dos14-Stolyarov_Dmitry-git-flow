@@ -1,12 +1,13 @@
 pipeline {
-  agent {
-    docker {
-      image 'python:3.11.3-buster'
-      args '-u 0'
-    }
-  }
+  agent any
   stages {
     stage('Lint') {
+      agent {
+        docker {
+          image 'python:3.11.3-buster'
+          args '-u 0'
+        }
+      }
       when { anyOf { branch 'feature-*'; branch 'fix-*' } }
       steps {
         sh "pip install poetry"
