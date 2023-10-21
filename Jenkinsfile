@@ -17,7 +17,9 @@ pipeline {
     stage('Deploy') {
       // when { branch 'master' }
       steps {
-        echo 'build and push'
+        script {
+          echo sh(returnStdout: true, script: 'env')
+        }
       }
     }
   }
