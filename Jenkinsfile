@@ -2,7 +2,7 @@ pipeline {
   agent {
     docker {
       image 'python:3.11.3-buster'
-      args '-u root'
+      args '-u 0'
     }
   }
   stages {
