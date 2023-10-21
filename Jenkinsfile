@@ -15,7 +15,7 @@ pipeline {
       }
     }
     stage('Deploy') {
-      when { branch 'master' }
+      // when { branch 'master' }
       steps {
         echo 'build and push'
       }
