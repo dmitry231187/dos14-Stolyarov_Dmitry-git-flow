@@ -20,7 +20,9 @@ pipeline {
       steps {
         script {
           def image = docker.build("dmitry231187/dos14-bpzb_authz:${env.GIT_COMMIT}")
-          image.push()
+          docker.withRegistry('', 'dockerhub-st.dmitry') {
+            image.push()
+          }
         }
       }
     }
