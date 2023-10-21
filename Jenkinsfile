@@ -8,7 +8,12 @@ pipeline {
           args '-u 0'
         }
       }
-      when { anyOf { branch 'feature-*'; branch 'fix-*' } }
+      when {
+        anyOf {
+          branch 'feature-*'
+          branch 'fix-*'
+        }
+      }
       steps {
         sh "pip install poetry"
         sh "poetry install --with dev"
@@ -16,7 +21,9 @@ pipeline {
       }
     }
     stage('Deploy') {
-      // when { branch 'master' }
+      when {
+        branch 'master'
+      }
       steps {
         script {
           def image = docker.build("dmitry231187/dos14-bpzb_authz:${env.GIT_COMMIT}")
