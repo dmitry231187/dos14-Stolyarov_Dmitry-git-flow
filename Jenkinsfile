@@ -18,7 +18,8 @@ pipeline {
       // when { branch 'master' }
       steps {
         script {
-          echo sh(returnStdout: true, script: 'env')
+          def image = docker.build("dmitry231187/dos14-bpzb_authz:${env.GIT_COMMIT}")
+          image.push()
         }
       }
     }
