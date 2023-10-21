@@ -7,20 +7,11 @@ pipeline {
   }
   stages {
     stage('Lint') {
+      when { anyOf { branch 'feature-*'; branch 'fix-*' } }
       steps {
         sh "pip install poetry"
         sh "poetry install --with dev"
         sh "poetry run -- black --check *.py"
-      }
-    }
-    stage('Build') {
-      steps {
-        echo 's1'
-      }
-    }
-    stage('Test') {
-      steps {
-        echo 's2'
       }
     }
     stage('Deploy') {
