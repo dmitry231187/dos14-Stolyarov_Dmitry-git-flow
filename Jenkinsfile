@@ -20,7 +20,7 @@ pipeline {
         sh "poetry run -- black --check *.py"
       }
     }
-    stage('Deploy') {
+    stage('Build') {
       when {
         branch 'master'
       }
