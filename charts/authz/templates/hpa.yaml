@@ -2,14 +2,15 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "authz-chart.fullname" . }}
+  name: {{ include "authz.fullname" . }}
+  namespace: {{ .Values.namespace }}
   labels:
-    {{- include "authz-chart.labels" . | nindent 4 }}
+    {{- include "authz.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "authz-chart.fullname" . }}
+    name: {{ include "authz.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:
