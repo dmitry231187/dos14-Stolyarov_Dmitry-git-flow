@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 # deployment
-replicaCount: 3
+replicaCount: 2
 strategy:
   type: RollingUpdate
   rollingUpdate:
@@ -101,7 +101,7 @@ autoscaling:
 
 # Additional volumes on the output Deployment definition.
 volumes: #[]
-  - configmap:
+  - configMap:
       name: authz-nginx-config
     name: nginx-config
 #   secret:

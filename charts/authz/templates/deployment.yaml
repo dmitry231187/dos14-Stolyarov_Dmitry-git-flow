@@ -39,8 +39,8 @@ spec:
         - name: {{ .Values.nginx.name }}
           image: {{ .Values.nginx.image }}
           ports:
-            - name: {{ .Values.nginx.ports.name }}
-              containerPort: {{ .Values.nginx.ports.containerPort }}
+            - containerPort: {{ .Values.nginx.ports.containerPort }}
+              name: {{ .Values.nginx.ports.name }}
               protocol: {{ .Values.nginx.ports.protocol }}
           volumeMounts:
             - name: {{ .Values.nginx.volumeMounts.name }}
