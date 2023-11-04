@@ -2,13 +2,23 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-namespace: bpzb
-
+# deployment
 replicaCount: 3
 strategy:
   type: RollingUpdate
   rollingUpdate:
     maxSurge: 2
+# containers nginx
+nginx:
+  name: nginx
+  image: nginx:1.25.3
+  ports:
+    name: http
+    containerPort: 80
+    protocol: TCP
+  volumeMounts:
+    name: nginx-config
+    mountPath: /etc/nginx
 
 image:
   repository: dmitry231187/dos14-bpzb_authz
@@ -48,22 +58,23 @@ securityContext: {}
 service:
   type: ClusterIP
   port: 80
-  targetPort: 5000
+  protocol: TCP
+  targetPort: 80
+  name: http
 
 ingress:
   enabled: true
-  className: ""
+  className: nginx
   annotations: #{}
-    kubernetes.io/ingress.class: nginx
+    #kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$1
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
     # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: authz.bpzb.smodata.net
+    - host: api.bpzb.smodata.net
       paths:
-        - path: /
-          pathType: Prefix
+        - path: /authz(.*)
+          pathType: ImplementationSpecific
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -89,8 +100,10 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 # Additional volumes on the output Deployment definition.
-volumes: []
-# - name: foo
+volumes: #[]
+  - configmap:
+      name: authz-nginx-config
+    name: nginx-config
 #   secret:
 #     secretName: mysecret
 #     optional: false
