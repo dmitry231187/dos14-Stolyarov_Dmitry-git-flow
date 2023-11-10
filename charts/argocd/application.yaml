@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bpzb-authz
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    name: ''
+    namespace: bpzb
+    server: 'https://kubernetes.default.svc'
+  source:
+    path: charts/authz
+    repoURL: 'https://github.com/dmitry231187/dos14-Stolyarov_Dmitry-git-flow.git'
+    targetRevision: argocd
+    helm:
+      valueFiles:
+        - values.yaml
+  sources: []
+  project: bpzb
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
