@@ -50,6 +50,7 @@ pipeline {
           // Change image.tag in file
           data.image.tag = "${env.GIT_COMMIT}"
 
+          sh "rm $path_to_file"
           writeYaml file: path_to_file, data: data
 
           withCredentials([string(credentialsId: 'st.dmitry_github', variable: 'SECRET')]) {
