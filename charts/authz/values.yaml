@@ -61,6 +61,7 @@ service:
   protocol: TCP
   targetPort: 80
   name: http
+  path: /api/v1/authz/health_check
 
 ingress:
   enabled: true
