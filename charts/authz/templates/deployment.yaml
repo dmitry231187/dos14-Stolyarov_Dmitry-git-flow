@@ -56,11 +56,11 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /api/v1/authz/health_check
+              path: /api/v22/authz/health_check
               port: http
           readinessProbe:
             httpGet:
-              path: /api/v1/authz/health_check
+              path: /api/v122/authz/health_check
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
