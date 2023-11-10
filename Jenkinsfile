@@ -55,10 +55,11 @@ pipeline {
 
           withCredentials([string(credentialsId: 'st.dmitry_github', variable: 'SECRET')]) {
             sh "git config --global user.name 'Jenkins'"
+            sh "git config --global user.email 'leshiy74@yandex.ru'"
             sh "git add $path_to_file"
             sh "git commit -m 'JENKINS: add new image tag ('${env.GIT_COMMIT}') for CD'"
             sh "git remote set-url origin https://${SECRET}@github.com/dmitry231187/dos14-Stolyarov_Dmitry-git-flow.git"
-            sh "git status"
+            sh "git push"
           }
         }
       }
