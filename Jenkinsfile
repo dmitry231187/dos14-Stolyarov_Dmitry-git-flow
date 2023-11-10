@@ -36,19 +36,19 @@ pipeline {
     }
     stage('Update Helm Chart') {
       when {
-        branch 'argocd'
+        branch 'master'
       }
       steps {
         script {
           sh "git checkout argocd"
           sh "git fetch --all"
-          sh "git reset --hard origin/develop"
+          sh "git reset --hard origin/master"
 
           def path_to_file = 'charts/authz/values.yaml'
           def data = readYaml file: path_to_file
 
           // Change image.tag in file
-          data.image.tag = "48eb5988cd74040ab8b4563724c1786626555930"
+          data.image.tag = "${env.GIT_COMMIT}"
 
           sh "rm $path_to_file"
           writeYaml file: path_to_file, data: data
@@ -57,7 +57,7 @@ pipeline {
             sh "git config --global user.name 'Jenkins'"
             sh "git config --global user.email 'leshiy74@yandex.ru'"
             sh "git add $path_to_file"
-            sh "git commit -m 'JENKINS: add new image tag 48eb5988cd74040ab8b4563724c1786626555930 for test CD'"
+            sh "git commit -m 'JENKINS: add new image tag "${env.GIT_COMMIT}" for test CD'"
             sh "git remote set-url origin https://${SECRET}@github.com/dmitry231187/dos14-Stolyarov_Dmitry-git-flow.git"
             sh "git push --force"
           }
