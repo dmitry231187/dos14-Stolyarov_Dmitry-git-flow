@@ -70,16 +70,17 @@ ingress:
     nginx.ingress.kubernetes.io/service-upstream: "true"
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$1
+    cert-manager.io/cluster-issuer: letsencrypt-prod
     # kubernetes.io/tls-acme: "true"
   hosts:
     - host: api.bpzb.smodata.net
       paths:
         - path: /authz(.*)
           pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+  tls: #[]
+    - secretName: bpzb
+      hosts:
+        - api.bpzb.smodata.net
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
