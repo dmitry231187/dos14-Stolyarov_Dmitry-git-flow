@@ -37,16 +37,16 @@ envs:
     value: "5432"
   - name: PG_DATABASE
     value: bpzb
-  - name: PG_USER
-    valueFrom:
-      secretKeyRef:
-        key: username
-        name: bpzb-db-creds
-  - name: PG_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        key: password
-        name: bpzb-db-creds
+  #- name: PG_USER
+    #valueFrom:
+      #secretKeyRef:
+        #key: username
+        #name: bpzb-db-creds
+  #- name: PG_PASSWORD
+    #valueFrom:
+      #secretKeyRef:
+        #key: password
+        #name: bpzb-db-creds
 
 image:
   repository: dmitry231187/dos14-bpzb_authz
