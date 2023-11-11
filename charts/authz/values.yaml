@@ -24,7 +24,7 @@ nginx:
     mountPath: /etc/nginx
 
 # deployment
-replicaCount: 2
+replicaCount: 1
 strategy:
   type: RollingUpdate
   rollingUpdate:
