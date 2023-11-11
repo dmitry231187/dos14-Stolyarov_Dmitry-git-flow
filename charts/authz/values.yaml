@@ -9,7 +9,7 @@ labels:
   env: prd
   app: authz
   app_version: 1.0.0
-  helm_chart_version: 0.8.0
+  helm_chart_version: 0.9.0
 
 # containers nginx
 nginx:
@@ -24,7 +24,7 @@ nginx:
     mountPath: /etc/nginx
 
 # deployment
-replicaCount: 1
+replicaCount: 2 
 strategy:
   type: RollingUpdate
   rollingUpdate:
