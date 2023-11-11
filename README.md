@@ -1,6 +1,12 @@
 # dos14-Stolyarov Dmitry-git-flow
 There are my homeworks
 
+Run:
+ kubectl apply -f charts/argocd/project.yaml
+ kubectl apply -f charts/argocd/application.yaml
+argocd will take helm chart from the branch argocd
+
+
 ## HW14
 1. Создать новый репозиторий dos14- family name-git-flow
 2. Создать 2 ветки master develop
