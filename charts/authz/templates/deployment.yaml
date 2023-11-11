@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "authz.fullname" . }}
+  name: {{ .Values.chartName }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- toYaml .Values.labels | nindent 4 }}
@@ -32,7 +32,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "authz.serviceAccountName" . }}
+      serviceAccountName: {{ .Values.serviceAccount.Name }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -45,10 +45,10 @@ spec:
           volumeMounts:
             - name: {{ .Values.nginx.volumeMounts.name }}
               mountPath: {{ .Values.nginx.volumeMounts.mountPath }}
-        - name: {{ .Chart.Name }}
+        - name: {{ .Values.chartName }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default 'latest' }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: {{ .Values.service.name }}

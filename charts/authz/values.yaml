@@ -2,7 +2,7 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-chart_name: bpzb-authz
+chartName: bpzb-authz
 
 labels:
   bank: bpzb
