@@ -18,7 +18,7 @@ metadata:
   name: {{ $fullName }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "authz.labels" . | nindent 4 }}
+    {{- toYaml .Values.labels | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}

@@ -4,14 +4,14 @@ metadata:
   name: {{ include "authz.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "authz.labels" . | nindent 4 }}
+    {{- toYaml .Values.labels | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "authz.selectorLabels" . | nindent 6 }}
+      {{- toYaml .Values.labels | nindent 6 }}
   strategy:
     type: {{ .Values.strategy.type }}
     rollingUpdate:
@@ -23,7 +23,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "authz.labels" . | nindent 8 }}
+        {{- toYaml .Values.labels | nindent 8 }}
 	{{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

@@ -2,6 +2,15 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+chart_name: bpzb-authz
+
+labels:
+  bank: bpzb
+  env: prd
+  app: authz
+  app_version: 1.0.0
+  helm_chart_version: 0.8.0
+
 # containers nginx
 nginx:
   name: nginx
