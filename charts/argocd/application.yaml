@@ -16,7 +16,7 @@ spec:
     targetRevision: argocd
     helm:
       valueFiles:
-        - values.yaml
+        - values-prd.yaml
   sources: []
   project: bpzb
   syncPolicy:

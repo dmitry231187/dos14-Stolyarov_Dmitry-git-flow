@@ -44,7 +44,7 @@ pipeline {
           sh "git fetch --all"
           sh "git reset --hard origin/master"
 
-          def path_to_file = 'charts/authz/values.yaml'
+          def path_to_file = 'charts/authz/values-prd.yaml'
           def data = readYaml file: path_to_file
 
           // Change image.tag in file
