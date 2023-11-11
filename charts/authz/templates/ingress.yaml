@@ -15,7 +15,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ .Chart.Name }}-ingress
+  name: {{ $.Chart.Name }}-ingress
   namespace: {{ .Release.Namespace }}
   labels:
     {{- toYaml .Values.labels | nindent 4 }}
@@ -54,7 +54,7 @@ spec:
                 port:
                   number: {{ $.Values.service.port }}
               {{- else }}
-              serviceName: {{ $fullName }}
+              serviceName: {{ $.Chart.Name }}-ingress
               servicePort: {{ $svcPort }}
               {{- end }}
           {{- end }}
