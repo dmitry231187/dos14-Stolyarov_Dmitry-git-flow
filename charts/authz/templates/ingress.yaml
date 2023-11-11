@@ -15,7 +15,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
+  name: {{ .Chart.Name }}-ingress
   namespace: {{ .Release.Namespace }}
   labels:
     {{- toYaml .Values.labels | nindent 4 }}
