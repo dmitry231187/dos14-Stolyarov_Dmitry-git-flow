@@ -2,12 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# deployment
-replicaCount: 2
-strategy:
-  type: RollingUpdate
-  rollingUpdate:
-    maxSurge: 2
 # containers nginx
 nginx:
   name: nginx
@@ -19,6 +13,31 @@ nginx:
   volumeMounts:
     name: nginx-config
     mountPath: /etc/nginx
+
+# deployment
+replicaCount: 2
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 2
+
+envs:
+  - name: PG_HOST
+    value: omegabank-rds-tf.cearikylb8tb.eu-west-1.rds.amazonaws.com
+  - name: PG_PORT
+    value: "5432"
+  - name: PG_DATABASE
+    value: bpzb
+  - name: PG_USER
+    valueFrom:
+      secretKeyRef:
+        key: username
+        name: bpzb-db-creds
+  - name: PG_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        key: password
+        name: bpzb-db-creds
 
 image:
   repository: dmitry231187/dos14-bpzb_authz
