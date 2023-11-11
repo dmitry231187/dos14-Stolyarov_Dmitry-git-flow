@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: bpzb
+  namespace: argocd
+spec:
+  description: CD for bpzb apps
+  sourceRepos:
+    - 'https://github.com/dmitry231187/dos14-Stolyarov_Dmitry-git-flow.git'
+  destinations:
+    - namespace: 'bpzb'
+      server: 'https://kubernetes.default.svc'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
