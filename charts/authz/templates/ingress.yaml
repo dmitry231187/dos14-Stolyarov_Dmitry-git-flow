@@ -1,5 +1,5 @@
 {{- if .Values.ingress.enabled -}}
-{{- $fullName := include "authz.fullname" . -}}
+{{- $fullName := .Values.chartName -}}
 {{- $svcPort := .Values.service.port -}}
 {{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
   {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
@@ -15,7 +15,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ $.Chart.Name }}-ingress
+  name: {{ .Values.chartName }}-ingress
   namespace: {{ .Release.Namespace }}
   labels:
     {{- toYaml .Values.labels | nindent 4 }}
@@ -50,11 +50,11 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $.Chart.Name }}-svc
+                name: {{ $.Values.chartName }}-svc
                 port:
                   number: {{ $.Values.service.port }}
               {{- else }}
-              serviceName: {{ $.Chart.Name }}-ingress
+              serviceName: {{ $.Values.chartName }}-ingress
               servicePort: {{ $svcPort }}
               {{- end }}
           {{- end }}
