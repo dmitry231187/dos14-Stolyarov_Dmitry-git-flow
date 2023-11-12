@@ -1,0 +1,17 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - python3-pip
+  - git
+  - ansible
+  - awscli
+  - postgresql-client
+runcmd:
+  - aws s3 cp s3://dos14-bpzb/bank/bank_rsa.pem /root/.ssh/id_rsa
+  - chmod 400 /root/.ssh/id_rsa
+  - iptables -A OUTPUT -m owner --uid-owner root -d 169.254.169.254 -j ACCEPT
+  - iptables -A OUTPUT -d 169.254.169.254 -j DROP
+  - ssh-keyscan github.com >> /root/.ssh/known_hosts
+  - cd /tmp/ && git clone git@github.com:Freek0/dos14-baturevich_dmitry-git-flow.git -b bank-launch-template bank
+  - cd /tmp/bank/ansible/ && ansible-playbook hw_20.yaml
