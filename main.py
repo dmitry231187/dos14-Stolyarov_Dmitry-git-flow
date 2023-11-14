@@ -1,589 +1,494 @@
-import yaml
-from datetime import date
 import json
-from flask import Flask, request, make_response
-from operator import attrgetter
+import yaml
+import sys
+import config
+from datetime import datetime, date
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
+from psycopg2.errors import NotNullViolation, UniqueViolation
+
 
 app = Flask(__name__)
+app.config[
+    "SQLALCHEMY_DATABASE_URI"
+] = f"postgresql://{config.PG_USER}:{config.PG_PASSWORD}@{config.PG_HOST}:{config.PG_PORT}/{config.PG_DB}"
+db = SQLAlchemy(app)
 
 
-class Permissions:
-    def __init__(self, create=False, read=False, update=False, delete=False):
-        self._create = create
-        self._read = read
-        self._update = update
-        self._delete = delete
-
-    @property
-    def create(self):
-        return self._create
-
-    @create.setter
-    def create(self, create):
-        self._create = create
-
-    @property
-    def read(self):
-        return self._read
-
-    @read.setter
-    def read(self, read):
-        self._read = read
-
-    @property
-    def update(self):
-        return self._update
-
-    @update.setter
-    def update(self, update):
-        self._update = update
-
-    @property
-    def delete(self):
-        return self._delete
-
-    @delete.setter
-    def delete(self, delete):
-        self._delete = delete
-
-    @property
-    def to_dict(self):
-        return {
-            "create": self._create,
-            "read": self._read,
-            "update": self._update,
-            "delete": self._delete,
-        }
+class AuthorizationError(BaseException):
+    pass
 
 
-class Role:
-    def __init__(self, name, dict_with_permission):
-        self._name = name
-        self._role = {}
-        for key, value in dict_with_permission.items():
-            self._role[key] = Permissions(**value)
-
-    @property
-    def name(self):
-        return self._name
-
-    def __getitem__(self, key):
-        if key in self._role.keys():
-            return self._role[key]
-        else:
-            return False
-
-    @property
-    def to_dict(self):
-        permissions = {}
-        for key, value in self._role.items():
-            permissions[key] = value.to_dict
-        return {
-            "name": self._name,
-            "permissions": permissions,
-        }
+class PermissionError(AuthorizationError):
+    pass
 
 
-class Client:
-    def __init__(self, client_id: int, role):
-        self._client_id = client_id
-        self._role = role
-
-    @property
-    def client_id(self):
-        return self._client_id
-
-    @property
-    def role(self):
-        return self._role
-
-    @role.setter
-    def role(self, role):
-        self._role = role
+class WrongClientType(AuthorizationError):
+    pass
 
 
-class User(Client):
-    def __init__(
-        self,
-        client_id: int,
-        role,
-        first_name,
-        last_name,
-        fathers_name,
-        date_of_birth: int,
-    ):
-        super().__init__(client_id, role)
-        self._first_name = first_name
-        self._last_name = last_name
-        self._fathers_name = fathers_name
-        self._date_of_birth = date_of_birth
+class ClientNotFoundError(AuthorizationError):
+    pass
 
-    @property
-    def first_name(self):
-        return self._first_name
 
-    @property
-    def last_name(self):
-        return self._last_name
+class Permissions(db.Model):
+    __tablename__ = "permissions"
 
-    @property
-    def fathers_name(self):
-        return self._fathers_name
+    id = db.mapped_column(db.Integer, primary_key=True)
+    create = db.mapped_column(db.Boolean)
+    read = db.mapped_column(db.Boolean)
+    update = db.mapped_column(db.Boolean)
+    delete = db.mapped_column(db.Boolean)
 
-    @property
-    def date_of_birth(self):
-        return self._date_of_birth
+    def __eq__(self, other):
+        if isinstance(other, Permissions):
+            return (
+                self.create == other.create
+                and self.read == other.read
+                and self.update == other.update
+                and self.delete == other.delete
+            )
+
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((self.create, self.read, self.update, self.delete))
+
+
+class Role(db.Model):
+    __tablename__ = "roles"
+
+    name = db.mapped_column(db.String, primary_key=True)
+    identities = db.mapped_column(db.Integer, db.ForeignKey("permissions.id"))
+    Identities = db.relationship("Permissions", foreign_keys=[identities])
+    credits = db.mapped_column(db.Integer, db.ForeignKey("permissions.id"))
+    Credits = db.relationship("Permissions", foreign_keys=[credits])
+    deposits = db.mapped_column(db.Integer, db.ForeignKey("permissions.id"))
+    Deposits = db.relationship("Permissions", foreign_keys=[deposits])
+    organisations = db.mapped_column(db.Integer, db.ForeignKey("permissions.id"))
+    Organisations = db.relationship("Permissions", foreign_keys=[organisations])
+    users = db.mapped_column(db.Integer, db.ForeignKey("permissions.id"))
+    Users = db.relationship("Permissions", foreign_keys=[users])
+    creditaccounts = db.mapped_column(db.Integer, db.ForeignKey("permissions.id"))
+    Creditaccounts = db.relationship("Permissions", foreign_keys=[creditaccounts])
+    debitaccounts = db.mapped_column(db.Integer, db.ForeignKey("permissions.id"))
+    Debitaccounts = db.relationship("Permissions", foreign_keys=[debitaccounts])
+
+    def __eq__(self, other):
+        if isinstance(other, Role):
+            return self.name == other.name
+
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((self.name))
+
+
+class Client(db.Model):
+    __tablename__ = "clients"
+
+    id = db.mapped_column(db.Integer, primary_key=True)
+    role_name = db.mapped_column(db.String, db.ForeignKey("roles.name"))
+    role = db.relationship("Role")
+
+    @db.validates("role")
+    def validate_role(self, key, value):
+        if not value:
+            raise ValueError("Client role must not be empty")
+        return value
+
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    client_id = db.mapped_column(db.Integer, db.ForeignKey("clients.id"))
+
+    client = db.relationship("Client")
+
+    first_name = db.mapped_column(db.String, primary_key=True)
+    last_name = db.mapped_column(db.String, primary_key=True)
+    fathers_name = db.mapped_column(db.String, primary_key=True)
+    date_of_birth = db.mapped_column(db.Date, primary_key=True)
+
+    @db.validates("fathers_name")
+    def validate_fathers_name(self, key, value):
+        if not value:
+            raise ValueError("Users fathers_name must not be empty")
+        return value
+
+    @db.validates("first_name")
+    def validate_first_name(self, key, value):
+        if not value:
+            raise ValueError("Users first_name must not be empty")
+        return value
+
+    @db.validates("last_name")
+    def validate_last_name(self, key, value):
+        if not value:
+            raise ValueError("Users last_name must not be empty")
+        return value
+
+    @db.validates("date_of_birth")
+    def validate_date_of_birth(self, key, value):
+        return datetime.strptime(value, "%d.%M.%Y").date()
 
     @property
     def age(self):
-        return date.today().year - self._date_of_birth
+        today = date.today()
+        return today.year - self.date_of_birth
 
-    @property
-    def to_dict(self):
-        return {
-            "client_id": self._client_id,
-            "first_name": self._first_name,
-            "last_name": self._last_name,
-            "fathers_name": self._fathers_name,
-            "date_of_birth": self._date_of_birth,
-            "role": self._role.to_dict,
-        }
+    def __eq__(self, other):
+        if isinstance(other, User):
+            return (
+                self.first_name == other.first_name
+                and self.last_name == other.last_name
+                and self.fathers_name == other.fathers_name
+                and self.date_of_birth == other.date_of_birth
+            )
 
-    @property
-    def to_dict_write(self):
-        return {
-            "client_id": self._client_id,
-            "first_name": self._first_name,
-            "last_name": self._last_name,
-            "fathers_name": self._fathers_name,
-            "date_of_birth": self._date_of_birth,
-            "role": self._role.name,
-        }
+        return NotImplemented
 
-
-class Organisation(Client):
-    def __init__(self, client_id: int, role, creation_date: int, unp: int, name):
-        super().__init__(client_id, role)
-        self._creation_date = creation_date
-        self._unp = unp
-        self._name = name
-
-    @property
-    def creation_date(self):
-        return self._creation_date
-
-    @property
-    def unp(self):
-        return self._unp
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def to_dict(self):
-        return {
-            "client_id": self._client_id,
-            "creation_date": self._creation_date,
-            "unp": self._unp,
-            "name": self._name,
-            "role": self._role.to_dict,
-        }
-
-    @property
-    def to_dict_write(self):
-        return {
-            "client_id": self._client_id,
-            "creation_date": self._creation_date,
-            "unp": self._unp,
-            "name": self._name,
-            "role": self._role.name,
-        }
-
-
-class App(Client):
-    def __init__(self, client_id: int, role, name):
-        super().__init__(client_id, role)
-        self._name = name
-
-    @property
-    def name(self):
-        return self._name
-
-
-# add new user
-def create_user(data):
-    client_id = clients[-1].client_id + 1
-    new_user = User(
-        client_id,
-        roles[data["role"]],
-        data["first_name"],
-        data["last_name"],
-        data["fathers_name"],
-        int(data["date_of_birth"]),
-    )
-    clients.append(new_user)
-
-
-# add new organisation
-def create_organisation(data):
-    client_id = clients[-1].client_id + 1
-    new_user = Organisation(
-        client_id,
-        roles[data["role"]],
-        int(data["creation_date"]),
-        int(data["unp"]),
-        data["name"],
-    )
-    clients.append(new_user)
-
-
-# write to json
-def write_json():
-    write_clients = {"Users": [], "Organisations": []}
-    for client in clients:
-        if isinstance(client, User):
-            write_clients["Users"].append(client.to_dict_write)
-        elif isinstance(client, Organisation):
-            write_clients["Organisations"].append(client.to_dict_write)
-    with open("users.json", "w") as f:
-        json.dump(write_clients, f, ensure_ascii=False)
-
-
-def some_main():
-    # создаем пустые массивы
-    global clients
-    global roles
-    clients = []
-    roles = {}
-
-    # получаем список roles
-    with open("roles.yaml", "r") as f:
-        roles_yaml = yaml.safe_load(f)
-    for key in roles_yaml.keys():
-        roles[key] = Role(key, roles_yaml[key])
-
-    # получаем список apps
-    with open("app.yaml", "r") as f:
-        app_yaml = yaml.safe_load(f)
-
-    for app in app_yaml["Apps"]:
-        clients.append(App(app["client_id"], roles[app["role"]], app["name"]))
-
-    # получаем список пользователей и организаций
-    with open("users.json", "r") as f:
-        users_json = json.load(f)
-
-    for usr in users_json["Users"]:
-        clients.append(
-            User(
-                usr["client_id"],
-                roles[usr["role"]],
-                usr["first_name"],
-                usr["last_name"],
-                usr["fathers_name"],
-                usr["date_of_birth"],
+    def __hash__(self):
+        return hash(
+            (
+                self.first_name,
+                self.last_name,
+                self.fathers_name,
+                self.date_of_birth,
             )
         )
 
-    for org in users_json["Organisations"]:
-        clients.append(
-            Organisation(
-                org["client_id"],
-                roles[org["role"]],
-                org["creation_date"],
-                org["unp"],
-                org["name"],
+    def to_dict(self):
+        d = self.__dict__.copy()
+        del d["_sa_instance_state"]
+        d["date_of_birth"] = self.date_of_birth.strftime("%d.%m.%Y")
+        return d
+
+
+class Organisation(db.Model):
+    __tablename__ = "organisations"
+
+    client_id = db.mapped_column(db.Integer, db.ForeignKey("clients.id"))
+
+    client = db.relationship("Client")
+    creation_date = db.mapped_column(db.Date, primary_key=True)
+    unp = db.mapped_column(db.String, primary_key=True)
+    name = db.mapped_column(db.String, primary_key=True)
+
+    @db.validates("name")
+    def validate_name(self, key, value):
+        if not value:
+            raise ValueError("Organisations name must not be empty")
+        return value
+
+    @db.validates("unp")
+    def validate_unp(self, key, value):
+        if not value:
+            raise ValueError("Organisations unp must not be empty")
+        return value
+
+    @db.validates("creation_date")
+    def validate_creation_date(self, key, value):
+        return datetime.strptime(value, "%d.%M.%Y").date()
+
+    def __eq__(self, other):
+        if isinstance(other, Organisation):
+            return (
+                self.name == other.name
+                and self.creation_date == other.creation_date
+                and self.unp == other.unp
+            )
+
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(
+            (
+                self.name,
+                self.creation_date,
+                self.unp,
             )
         )
 
-    # сортируем клиентов по client_id
-    clients = sorted(clients, key=attrgetter("client_id"))
+    def to_dict(self):
+        d = self.__dict__.copy()
+        del d["_sa_instance_state"]
+        d["creation_date"] = self.creation_date.strftime("%d.%m.%Y")
+        return d
 
 
-# get and return all clients (users or organisations) to json str
-def all_clients(user_type):
-    array = []
-    for client in clients:
-        if user_type == "user" and isinstance(client, User):
-            array.append(client.to_dict)
-        elif user_type == "organisation" and isinstance(client, Organisation):
-            array.append(client.to_dict)
-    return [json.dumps(array, ensure_ascii=False), "client_id"]
+class App(db.Model):
+    __tablename__ = "apps"
+
+    client_id = db.mapped_column(db.Integer, db.ForeignKey("clients.id"))
+
+    client = db.relationship("Client")
+
+    name = db.mapped_column(db.String, primary_key=True)
+
+    @db.validates("name")
+    def validate_name(self, key, value):
+        if not value:
+            raise ValueError("App name must not be empty")
+        return value
+
+    def __eq__(self, other):
+        if isinstance(other, App):
+            return self.name == other.name
+
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((self.name))
+
+    def to_dict(self):
+        d = self.__dict__.copy()
+        del d["_sa_instance_state"]
+        return d
 
 
-# check input data in methods PUT
-def check_put_data(input_data, role_name):
-    if role_name == "users":
-        client_data = [
-            "role",
-            "first_name",
-            "last_name",
-            "fathers_name",
-            "date_of_birth",
-        ]
-    elif role_name == "organisations":
-        client_data = [
-            "role",
-            "creation_date",
-            "unp",
-            "name",
-        ]
-    else:
-        return False
-    if not isinstance(input_data, dict):
-        return False
-    for data in client_data:
-        if data not in input_data.keys():
-            return False
+def get_client_by_id(client_id, client_type=None):
+    if client_type:
+        client_class = getattr(sys.modules[__name__], client_type)
+        client = db.session.query(client_class).filter_by(client_id=client_id).all()
+        if client:
+            return client[0]
+        raise ClientNotFoundError(
+            f"No {client_type} found with client_id = {client_id}"
+        )
+
+    user = db.session.query(User).filter_by(client_id=client_id).all()
+    if user:
+        return user[0]
+    app = db.session.query(App).filter_by(client_id=client_id).all()
+    if app:
+        return app[0]
+    org = db.session.query(Organisation).filter_by(client_id=client_id).all()
+    if org:
+        return org[0]
+
+    raise ClientNotFoundError(f"No Client found with client_id = {client_id}")
+
+
+def get_client_id_from_header(header_name, headers):
+    if header_name not in headers:
+        raise ValueError(f"{header_name} header not found")
+
+    header = headers.get(header_name)
+    header = json.loads(header)
+
+    if "client_id" not in header:
+        raise ValueError(f"{header_name} header doesnt have client_id attribute")
+
+    return header["client_id"]
+
+
+def check_permission(client, entity, permission):
+    client = client.client
+    permissions = getattr(client.role, entity)
+    if not getattr(permissions, permission):
+        raise PermissionError(
+            f"Client with id {client.id} does not have {entity}.{permission} permission"
+        )
+
     return True
 
 
-# получаем client_id из заголовка token, проверяем его, получаем данные по required_id
-def find_id(header, required_id, role_name, data):
-    if role_name == "users":
-        client_type = "user"
-        client_class = User
-    elif role_name == "organisations":
-        client_type = "organisation"
-        client_class = Organisation
-    if header:
-        token = json.loads(header)
-        # check client_id and permissions client_id
-        if token.get("client_id") or token.get("client_id") == 0:
-            client_id = token.get("client_id")
-            # на всякий случай проверим запрашиваюшего
-            if client_id in range(-2, len(clients) - 1) and client_id != 0:
-                if client_id < 0:
-                    client_id += 1
-                if isinstance(clients[client_id + 1].role[role_name], Permissions):
-                    # check methods - put?
-                    if required_id == "put":
-                        if clients[client_id + 1].role[role_name].create:
-                            # check input data in methods PUT
-                            if not check_put_data(data, role_name):
-                                return [
-                                    {
-                                        "status": "error",
-                                        "message": f"Incorrect client data entered to create {client_type}: {data}",
-                                    },
-                                    400,
-                                ]
-                            # create user or organisation and write to file
-                            if role_name == "users":
-                                create_user(data)
-                                write_json()
-                            elif role_name == "organisations":
-                                create_organisation(data)
-                                write_json()
-                            return [{"status": "success", "message": "create"}, 200]
-                        else:
-                            if client_id < 0:
-                                client_id -= 1
-                            return [
-                                {
-                                    "status": "error",
-                                    "message": f"Access is denied for client with id = {client_id}",
-                                },
-                                403,
-                            ]
-                    # check permissions for read
-                    if clients[client_id + 1].role[role_name].read:
-                        # check required_id and return json clients data
-                        if required_id == "all":
-                            return all_clients(client_type)
-                        elif required_id in range(1, len(clients) - 1) and isinstance(
-                            clients[required_id + 1], client_class
-                        ):
-                            return [
-                                json.dumps(
-                                    clients[required_id + 1].to_dict,
-                                    ensure_ascii=False,
-                                ),
-                                "client_id",
-                            ]
-                        else:
-                            return [
-                                {
-                                    "status": "error",
-                                    "message": f"No {client_type} with id = {required_id}",
-                                },
-                                400,
-                            ]
-                    else:
-                        if client_id < 0:
-                            client_id -= 1
-                        return [
-                            {
-                                "status": "error",
-                                "message": f"Access is denied for client with id = {client_id}",
-                            },
-                            403,
-                        ]
-                else:
-                    if client_id < 0:
-                        client_id -= 1
-                    return [
-                        {
-                            "status": "error",
-                            "message": f"Access is denied for client with id = {client_id}",
-                        },
-                        403,
-                    ]
-            else:
-                if client_id < 0:
-                    client_id -= 1
-                return [
-                    {
-                        "status": "error",
-                        "message": f"No client with id = {client_id}",
-                    },
-                    400,
-                ]
-        else:
-            return [
-                {"status": "error", "message": "Client_id in token header not found"},
-                400,
-            ]
-    else:
-        return [{"status": "error", "message": "Token header not found"}, 400]
-
-
-# получаем данные о пользователе
-@app.route("/api/v1/<client>/<int:client_id>", methods=["GET"])
-def client_data(client, client_id):
-    if client not in ("users", "organisations"):
-        response = make_response({"status": "error", "message": f"{client} not found"})
-        response.status = 400
-        return response
-    result = find_id(request.headers.get("token"), client_id, client, False)
-    # check flag'client_id', if true - give result, else - error
-    if result[1] == "client_id":
-        return result[0]
-    else:
-        response = make_response(result[0])
-        response.status = result[1]
-        return response
-
-
-# получаем данные о всех пользователях
-@app.route("/api/v1/<client>", methods=["GET"])
-def all_clients_data(client):
-    if client not in ("users", "organisations"):
-        response = make_response({"status": "error", "message": f"{client} not found"})
-        response.status = 400
-        return response
-    result = find_id(request.headers.get("token"), "all", client, False)
-    # check flag'client_id', if true - give result, else - error
-    if result[1] == "client_id":
-        return result[0]
-    else:
-        response = make_response(result[0])
-        response.status = result[1]
-        return response
-
-
-# создаем нового клиента
-@app.route("/api/v1/<client>", methods=["PUT"])
-def new_client(client):
-    if client not in ("users", "organisations"):
-        response = make_response({"status": "error", "message": f"{client} not found"})
-        response.status = 400
-        return response
-    result = find_id(request.headers.get("token"), "put", client, request.get_json())
-    response = make_response(result[0])
-    response.status = result[1]
-    return response
-
-
-# обработка для функции провреки прав
-def get_permis(header, role_name, action):
-    if header:
-        token = json.loads(header)
-        # check client_id and permissions client_id
-        if token.get("client_id") or token.get("client_id") == 0:
-            client_id = token.get("client_id")
-            # на всякий случай проверим запрашиваюшего
-            if client_id in range(-2, len(clients) - 1) and client_id != 0:
-                if client_id < 0:
-                    client_id += 1
-                # check permissions
-                if isinstance(clients[client_id + 1].role[role_name], Permissions):
-                    if (
-                        (
-                            action == "create"
-                            and clients[client_id + 1].role[role_name].create
-                        )
-                        or (
-                            action == "read"
-                            and clients[client_id + 1].role[role_name].read
-                        )
-                        or (
-                            action == "update"
-                            and clients[client_id + 1].role[role_name].update
-                        )
-                        or (
-                            action == "delete"
-                            and clients[client_id + 1].role[role_name].delete
-                        )
-                    ):
-                        return [{"status": "success", "message": "authorized"}, 200]
-                    else:
-                        return [{"status": "error", "message": "not authorized"}, 403]
-                else:
-                    return [{"status": "error", "message": "not authorized"}, 403]
-            else:
-                if client_id < 0:
-                    client_id -= 1
-                return [
-                    {
-                        "status": "error",
-                        "message": f"No client with id = {client_id}",
-                    },
-                    400,
-                ]
-        else:
-            return [
-                {"status": "error", "message": "Client_id in token header not found"},
-                400,
-            ]
-    else:
-        return [{"status": "error", "message": "Token header not found"}, 400]
-
-
-# проверяем права
-@app.route("/api/v1/<role_name>/authz/<action>", methods=["GET"])
-def check_permissions(role_name, action):
-    if role_name not in (
-        "credits",
-        "deposits",
-        "debitaccounts",
-        "creditaccounts",
-        "users",
-        "organisations",
-        "identities",
-    ) or action not in ("create", "read", "update", "delete"):
-        response = make_response(
-            {"status": "error", "message": f"{role_name} or {action} not found"}
+def check_client_type(client_type):
+    if client_type not in ["users", "organisations"]:
+        raise WrongClientType(
+            f"Client type {client_type} is wrong. Must be one of users, organisations"
         )
-        response.status = 400
-        return response
-    else:
-        result = get_permis(request.headers.get("token"), role_name, action)
-        response = make_response(result[0])
-        response.status = result[1]
-        return response
 
 
-# check health, return 200
-# return 200
+def client_from_dict(client_dict, roles):
+    client = {}
+    client["role"] = list(filter(lambda r: r.name == client_dict["role"], roles))[0]
+    if "client_id" in client_dict:
+        client["id"] = client_dict["client_id"]
+    client = Client(**client)
+    return client
+
+
+def seed_data():
+    roles = db.session.query(Role).all()
+    organisations = db.session.query(Organisation).all()
+    users = db.session.query(User).all()
+    apps = db.session.query(App).all()
+    permissions = db.session.query(Permissions).all()
+
+    with open("data/permissions.yaml", "r") as f:
+        for permission in yaml.safe_load(f):
+            permission = Permissions(**permission)
+            if permission not in permissions:
+                db.session.add(permission)
+                db.session.commit()
+                permissions.append(permission)
+
+    with open("data/roles.yaml", "r") as f:
+        for role_name, role_obj in yaml.safe_load(f).items():
+            role = {}
+            for entity, permissions_dict in role_obj.items():
+                permission = Permissions(**permissions_dict)
+                permission = list(filter(lambda p: p == permission, permissions))[0]
+
+                role[entity] = permission
+
+            role["name"] = role_name
+
+            role = Role(**role)
+            if role not in roles:
+                db.session.add(role)
+                db.session.commit()
+                roles.append(role)
+
+    with open("data/app.yaml", "r") as f:
+        apps_data = yaml.safe_load(f)["Apps"]
+        for app in apps_data:
+            app["client"] = client_from_dict(app, roles)
+            del app["client_id"]
+            del app["role"]
+
+            app = App(**app)
+            if app not in apps:
+                db.session.add(app)
+                db.session.commit()
+                apps.append(app)
+
+    with open("data/users.json", "r") as f:
+        json_data = json.load(f)
+        users_data = json_data["Users"]
+        for user in users_data:
+            user["client"] = client_from_dict(user, roles)
+            del user["role"]
+
+            user["date_of_birth"] = user["date_of_birth"]
+            user = User(**user)
+            if user not in users:
+                db.session.add(user)
+                db.session.commit()
+                users.append(user)
+
+        organisations_data = json_data["Organisations"]
+        for organisation in organisations_data:
+            organisation["client"] = client_from_dict(organisation, roles)
+            del organisation["role"]
+
+            organisation["creation_date"] = organisation["creation_date"]
+            organisation = Organisation(**organisation)
+            if organisation not in organisations:
+                db.session.add(organisation)
+                db.session.commit()
+                organisations.append(organisation)
+
+
+@app.route("/api/v1/<string:client_type>/<int:client_id>", methods=["GET"])
+def get_client(client_type, client_id):
+    try:
+        check_client_type(client_type)
+        requestor_id = get_client_id_from_header("token", request.headers)
+        requestor = get_client_by_id(requestor_id)
+        client_type = client_type.capitalize()
+        client_type_single = client_type[0:-1]
+        check_permission(requestor, client_type, "read")
+        client = get_client_by_id(client_id, client_type_single)
+        return json.dumps(client.to_dict(), ensure_ascii=False)
+    except AuthorizationError as e:
+        return jsonify({"status": "error", "message": str(e)}), 403
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/api/v1/<string:client_type>", methods=["GET"])
+def get_clients(client_type):
+    try:
+        check_client_type(client_type)
+        requestor_id = get_client_id_from_header("token", request.headers)
+        requestor = get_client_by_id(requestor_id)
+        client_type = client_type.capitalize()
+        client_type_single = client_type[0:-1]
+        check_permission(requestor, client_type, "read")
+        client_class = getattr(sys.modules[__name__], client_type_single)
+        clients = db.session.query(client_class).all()
+        clients = [c.to_dict() for c in clients]
+        return json.dumps(clients, ensure_ascii=False)
+    except AuthorizationError as e:
+        return jsonify({"status": "error", "message": str(e)}), 403
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/api/v1/<string:client_type>", methods=["PUT"])
+def create_clients(client_type):
+    try:
+        check_client_type(client_type)
+        requestor_id = get_client_id_from_header("token", request.headers)
+        requestor = get_client_by_id(requestor_id)
+        client_type = client_type.capitalize()
+        client_type_single = client_type[0:-1]
+        check_permission(requestor, client_type, "read")
+        roles = db.session.query(Role).all()
+        data = request.get_json()
+        if "role" not in data:
+            raise ValueError(f"{client_type} must have role attribute")
+        data["client"] = client_from_dict(data, roles)
+        del data["role"]
+        client_class = getattr(sys.modules[__name__], client_type_single)
+        client = client_class(**data)
+        db.session.add(client)
+        db.session.commit()
+
+        return (
+            jsonify({"status": "success", "message": "User created successfully"}),
+            201,
+        )
+    except AuthorizationError as e:
+        return jsonify({"status": "error", "message": str(e)}), 403
+    except IntegrityError as e:
+        if isinstance(e.orig, NotNullViolation):
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Not all client attributes are spcified",
+                    }
+                ),
+                400,
+            )
+        elif isinstance(e.orig, UniqueViolation):
+            return jsonify({"status": "error", "message": "Client already exists"}), 400
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except TypeError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/api/v1/<string:entity>/authz/<string:permission>", methods=["GET"])
+def check_authorization(entity, permission):
+    try:
+        requestor_id = get_client_id_from_header("token", request.headers)
+        requestor = get_client_by_id(requestor_id)
+        check_permission(requestor, entity.capitalize(), permission)
+        return {"status": "success", "message": "Authorized"}, 200
+    except AuthorizationError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except AttributeError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 @app.route("/api/v1/authz/health_check", methods=["GET"])
 def health_check():
-    response = make_response({"status": "success", "message": "health ok"})
-    response.status = 200
-    return response
+    return jsonify({"status": "OK"}), 200
 
+
+with app.app_context():
+    db.create_all()
+
+    seed_data()
 
 if __name__ == "__main__":
-    some_main()
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0")
