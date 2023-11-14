@@ -34,7 +34,7 @@ envs:
     value: omegabank-rds-tf.cearikylb8tb.eu-west-1.rds.amazonaws.com
   - name: PG_PORT
     value: "5432"
-  - name: PG_DATABASE
+  - name: PG_DB
     value: bpzb
   - name: PG_USER
     valueFrom:
