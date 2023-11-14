@@ -34,18 +34,18 @@ envs:
     value: omegabank-rds-tf.cearikylb8tb.eu-west-1.rds.amazonaws.com
   - name: PG_PORT
     value: "5432"
-  - name: PG_DATABASE
+  - name: PG_DB
     value: bpzb
-  #- name: PG_USER
-    #valueFrom:
-      #secretKeyRef:
-        #key: username
-        #name: bpzb-db-creds
-  #- name: PG_PASSWORD
-    #valueFrom:
-      #secretKeyRef:
-        #key: password
-        #name: bpzb-db-creds
+  - name: PG_USER
+    valueFrom:
+      secretKeyRef:
+        key: PG_USER
+        name: bpzb-db-creds
+  - name: PG_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        key: PG_PASSWORD
+        name: bpzb-db-creds
 
 image:
   repository: dmitry231187/dos14-bpzb_authz
